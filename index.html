@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KASU - Financial Tracker</title>
+    <style>
+        :root {
+            /* KASU Branding Colors */
+            --primary: #4f46e5; /* Indigo */
+            --primary-dark: #4338ca;
+            --success: #10b981;
+            --danger: #ef4444;
+            --bg: #f3f4f6;
+            --card: #ffffff;
+            --text: #111827;
+            --text-secondary: #6b7280;
+            --border: #e5e7eb;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
+        
+        body { background-color: var(--bg); color: var(--text); padding: 20px; max-width: 1000px; margin: 0 auto; }
+        
+        h1, h2, h3 { margin-bottom: 10px; font-weight: 700; }
+        
+        /* Layout Grid */
+        .container { display: grid; grid-template-columns: 1fr; gap: 20px; }
+        @media (min-width: 768px) {
+            .container { grid-template-columns: 1fr 2fr; }
+        }
+
+        /* Cards */
+        .card { background: var(--card); padding: 24px; border-radius: 16px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); border: 1px solid var(--border); margin-bottom: 20px; }
+        
+        /* Summary Section */
+        .summary-box { text-align: center; padding: 20px; background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); color: white; border-radius: 12px; margin-bottom: 20px; }
+        .summary-box h1 { font-size: 3rem; margin: 10px 0; letter-spacing: -1px; }
+        .summary-box label { color: #e0e7ff; font-weight: 500; font-size: 0.95rem; }
+        
+        /* Account Chips */
+        .account-list { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 15px; }
+        .account-chip { background: var(--bg); border: 1px solid var(--border); padding: 10px 14px; border-radius: 25px; font-size: 0.9rem; display: flex; justify-content: space-between; align-items: center; min-width: 130px; transition: 0.2s; }
+        .account-chip:hover { border-color: var(--primary); background: #fff; }
+        .account-chip span { font-weight: bold; color: var(--text); }
+        .btn-delete-acc { color: var(--text-secondary); cursor: pointer; margin-left: 10px; font-weight: bold; font-size: 1.1rem; }
+        .btn-delete-acc:hover { color: var(--danger); }
+
+        /* Forms */
+        .form-group { margin-bottom: 18px; }
+        label { display: block; margin-bottom: 6px; font-size: 0.85rem; color: var(--text-secondary); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+        input, select { width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 1rem; background: #f9fafb; transition: 0.2s; }
+        input:focus, select:focus { outline: none; border-color: var(--primary); background: #fff; box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1); }
+        
+        button { cursor: pointer; padding: 12px 20px; border: none; border-radius: 8px; font-weight: 600; transition: 0.2s; font-size: 1rem; }
+        .btn-primary { background: var(--primary); color: white; width: 100%; }
+        .btn-primary:hover { background: var(--primary-dark); transform: translateY(-1px); }
+        .btn-outline { background: white; border: 1px solid var(--border); color: var(--text-secondary); padding: 8px 12px; font-size: 0.85rem; display: inline-flex; align-items: center; gap: 5px; }
+        .btn-outline:hover { background: var(--bg); color: var(--text); }
+        
+        /* Transaction List */
+        .transaction-list { list-style: none; }
+        .transaction-item { display: flex; justify-content: space-between; align-items: center; padding: 16px; border-bottom: 1px solid var(--border); transition: 0.2s; }
+        .transaction-item:hover { background-color: #f9fafb; }
+        .transaction-item:last-child { border-bottom: none; }
+        
+        .t-left { display: flex; align-items: center; gap: 12px; }
+        .t-icon { width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; background: #f3f4f6; }
+        .t-info { display: flex; flex-direction: column; }
+        .t-desc { font-weight: 600; font-size: 1rem; }
+        .t-meta { font-size: 0.8rem; color: var(--text-secondary); margin-top: 2px; }
+        
+        .t-right { text-align: right; }
+        .t-amount { font-weight: 700; font-size: 1.1rem; display: block; }
+        .income { color: var(--success); }
+        .expense { color: var(--danger); }
+        
+        .delete-t { font-size: 0.75rem; color: var(--text-secondary); cursor: pointer; text-decoration: underline; margin-top: 4px; display: inline-block; opacity: 0; transition: 0.2s; }
+        .transaction-item:hover .delete-t { opacity: 1; }
+        .delete-t:hover { color: var(--danger); }
+
+        /* Utility Header */
+        header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; padding-bottom: 20px; border-bottom: 1px solid var(--border); }
+        .brand { font-size: 1.5rem; font-weight: 800; color: var(--primary); letter-spacing: -0.5px; }
+        .data-controls { display: flex; gap: 8px; }
+
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="brand">KASU</div>
+        <div class="data-controls">
+            <button class="btn-outline" onclick="exportData()">💾 Save Backup</button>
+            <button class="btn-outline" onclick="document.getElementById('fileInput').click()">📂 Load Backup</button>
+            <input type="file" id="fileInput" style="display: none;" onchange="importData(this)">
+            <button class="btn-outline" onclick="clearAllData()" style="color: var(--danger); border-color: var(--danger);">Reset</button>
+        </div>
+    </header>
+
+    <div class="card">
+        <div class="summary-box">
+            <label>Total Net Worth</label>
+            <h1 id="totalBalance">₹0.00</h1>
+        </div>
+        
+        <div style="display: flex; justify-content: space-between; align-items: flex-end;">
+            <h3>Accounts</h3>
+        </div>
+        
+        <div class="account-list" id="accountListDisplay">
+            </div>
+
+        <div style="margin-top: 20px; display: flex; gap: 10px; border-top: 1px solid var(--border); padding-top: 15px;">
+            <input type="text" id="newAccountName" placeholder="New Account Name (e.g., Paytm)">
+            <button class="btn-outline" onclick="addAccount()" style="width: auto; background: var(--primary); color: white; border: none;">+ Add Account</button>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="card">
+            <h3>New Transaction</h3>
+            <form id="transactionForm" onsubmit="handleTransaction(event)">
+                <div class="form-group">
+                    <label>Description</label>
+                    <input type="text" id="desc" placeholder="What is this for?" required>
+                </div>
+                <div class="form-group">
+                    <label>Amount (₹)</label>
+                    <input type="number" id="amount" step="0.01" placeholder="0.00" required>
+                </div>
+                <div class="form-group">
+                    <label>Type</label>
+                    <select id="type">
+                        <option value="expense">Expense (Out)</option>
+                        <option value="income">Income (In)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Wallet / Account</label>
+                    <select id="accountSelect" required>
+                        </select>
+                </div>
+                <button type="submit" class="btn-primary">Add to KASU</button>
+            </form>
+        </div>
+
+        <div class="card">
+            <h3>Recent Activity</h3>
+            <ul class="transaction-list" id="historyList">
+                </ul>
+        </div>
+    </div>
+
+    <script>
+        // --- State Management (Prefixed with kasu_) ---
+        // Using existing data if present
+        let accounts = JSON.parse(localStorage.getItem('kasu_accounts')) || { "Cash": 0, "Bank": 0 };
+        let transactions = JSON.parse(localStorage.getItem('kasu_transactions')) || [];
+
+        // --- Initialization ---
+        function init() {
+            renderAccounts();
+            renderHistory();
+            updateTotal();
+        }
+
+        // --- Core Functions ---
+        
+        function handleTransaction(e) {
+            e.preventDefault();
+            
+            const desc = document.getElementById('desc').value;
+            const amount = parseFloat(document.getElementById('amount').value);
+            const type = document.getElementById('type').value;
+            const account = document.getElementById('accountSelect').value;
+
+            if (!account) { alert("Please add an account first."); return; }
+
+            // Update Account Balance
+            if (type === 'income') {
+                accounts[account] += amount;
+            } else {
+                accounts[account] -= amount;
+            }
+
+            // Create Transaction Object
+            const transaction = {
+                id: Date.now(),
+                desc,
+                amount,
+                type,
+                account,
+                date: new Date().toLocaleDateString()
+            };
+
+            transactions.unshift(transaction); // Add to top
+            saveData();
+            
+            // Reset Form
+            document.getElementById('desc').value = '';
+            document.getElementById('amount').value = '';
+            
+            init();
+        }
+
+        function addAccount() {
+            const name = document.getElementById('newAccountName').value.trim();
+            if (name && !accounts[name]) {
+                accounts[name] = 0;
+                document.getElementById('newAccountName').value = '';
+                saveData();
+                init();
+            } else if (accounts[name]) {
+                alert("Account already exists in KASU!");
+            }
+        }
+
+        function deleteAccount(name) {
+            if (confirm(`Remove "${name}" from KASU? History will remain, but the account will be hidden.`)) {
+                delete accounts[name];
+                saveData();
+                init();
+            }
+        }
+
+        function deleteTransaction(id) {
+            const t = transactions.find(t => t.id === id);
+            if (!t) return;
+
+            // Revert balance
+            if (accounts[t.account] !== undefined) {
+                if (t.type === 'income') accounts[t.account] -= t.amount;
+                else accounts[t.account] += t.amount;
+            }
+
+            transactions = transactions.filter(t => t.id !== id);
+            saveData();
+            init();
+        }
+
+        // --- Rendering ---
+
+        function renderAccounts() {
+            const list = document.getElementById('accountListDisplay');
+            const select = document.getElementById('accountSelect');
+            
+            list.innerHTML = '';
+            select.innerHTML = '';
+
+            let hasAccounts = false;
+
+            for (const [name, balance] of Object.entries(accounts)) {
+                hasAccounts = true;
+                
+                // Render Chip with INR
+                const chip = document.createElement('div');
+                chip.className = 'account-chip';
+                chip.innerHTML = `
+                    <div>
+                        <div style="font-size:0.75rem; color:#6b7280; text-transform:uppercase;">${name}</div>
+                        <div>₹${balance.toFixed(2)}</div>
+                    </div>
+                    <span class="btn-delete-acc" onclick="deleteAccount('${name}')">×</span>
+                `;
+                list.appendChild(chip);
+
+                // Render Select Option
+                const option = document.createElement('option');
+                option.value = name;
+                option.innerText = name;
+                select.appendChild(option);
+            }
+
+            if (!hasAccounts) {
+                list.innerHTML = '<p style="font-size:0.9rem; color:#6b7280; padding:10px;">No active accounts.</p>';
+            }
+        }
+
+        function renderHistory() {
+            const list = document.getElementById('historyList');
+            list.innerHTML = '';
+
+            transactions.forEach(t => {
+                const li = document.createElement('li');
+                li.className = 'transaction-item';
+                
+                const sign = t.type === 'income' ? '+' : '-';
+                const colorClass = t.type === 'income' ? 'income' : 'expense';
+                const icon = t.type === 'income' ? '↓' : '↑'; 
+
+                // Render History with INR
+                li.innerHTML = `
+                    <div class="t-left">
+                        <div class="t-icon">${icon}</div>
+                        <div class="t-info">
+                            <span class="t-desc">${t.desc}</span>
+                            <span class="t-meta">${t.account} • ${t.date}</span>
+                        </div>
+                    </div>
+                    <div class="t-right">
+                        <span class="t-amount ${colorClass}">${sign}₹${t.amount.toFixed(2)}</span>
+                        <span class="delete-t" onclick="deleteTransaction(${t.id})">Delete</span>
+                    </div>
+                `;
+                list.appendChild(li);
+            });
+
+            if (transactions.length === 0) {
+                list.innerHTML = '<div style="text-align:center; padding:30px; color:#9ca3af">No recent activity.</div>';
+            }
+        }
+
+        function updateTotal() {
+            const total = Object.values(accounts).reduce((acc, curr) => acc + curr, 0);
+            // Render Total with INR
+            document.getElementById('totalBalance').innerText = `₹${total.toFixed(2)}`;
+        }
+
+        // --- Data Persistence ---
+
+        function saveData() {
+            localStorage.setItem('kasu_accounts', JSON.stringify(accounts));
+            localStorage.setItem('kasu_transactions', JSON.stringify(transactions));
+        }
+
+        function clearAllData() {
+            if(confirm("Reset KASU? This will wipe all data.")) {
+                localStorage.removeItem('kasu_accounts');
+                localStorage.removeItem('kasu_transactions');
+                location.reload();
+            }
+        }
+
+        function exportData() {
+            const data = { accounts, transactions };
+            const blob = new Blob([JSON.stringify(data)], { type: "application/json" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            const date = new Date().toISOString().split('T')[0];
+            a.download = `KASU_Backup_${date}.json`;
+            a.click();
+        }
+
+        function importData(input) {
+            const file = input.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    if (data.accounts && data.transactions) {
+                        accounts = data.accounts;
+                        transactions = data.transactions;
+                        saveData();
+                        init();
+                        alert("KASU data restored successfully!");
+                    } else {
+                        alert("Invalid file format.");
+                    }
+                } catch (err) {
+                    alert("Error reading file.");
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        // Start App
+        init();
+
+    </script>
+</body>
+</html>
