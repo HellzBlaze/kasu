@@ -3,532 +3,636 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>KASU - Pro</title>
+    <title>KASU Ultimate</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root {
-            --primary: #4f46e5;
-            --primary-dark: #4338ca;
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
             --success: #10b981;
             --danger: #ef4444;
+            --warning: #f59e0b;
             --bg: #f3f4f6;
             --card: #ffffff;
-            --text: #111827;
-            --text-secondary: #6b7280;
+            --text: #1f2937;
+            --text-muted: #6b7280;
             --border: #e5e7eb;
-            --nav-bg: #ffffff;
             --input-bg: #f9fafb;
         }
 
-        /* Dark Mode Variables */
         [data-theme="dark"] {
             --bg: #111827;
             --card: #1f2937;
-            --text: #f9fafb;
-            --text-secondary: #9ca3af;
+            --text: #f3f4f6;
+            --text-muted: #9ca3af;
             --border: #374151;
-            --nav-bg: #1f2937;
             --input-bg: #374151;
         }
 
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Roboto, sans-serif; }
-        
-        body { background-color: var(--bg); color: var(--text); height: 100vh; overflow: hidden; transition: 0.3s; }
-        
-        /* --- AUTH SCREEN --- */
-        #auth-overlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: var(--bg); z-index: 2000;
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-            padding: 20px;
-        }
-        .auth-card {
-            background: var(--card); padding: 40px; border-radius: 20px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.1); text-align: center;
-            width: 100%; max-width: 400px; border: 1px solid var(--border);
-        }
-        .pin-display {
-            font-size: 2rem; letter-spacing: 10px; margin: 20px 0;
-            border: 2px solid var(--border); padding: 10px; border-radius: 10px;
-            height: 60px; display: flex; align-items: center; justify-content: center;
-            color: var(--text);
-        }
-        .numpad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-top: 20px; }
-        .num-btn {
-            background: var(--input-bg); border: 1px solid var(--border); color: var(--text);
-            padding: 15px; font-size: 1.2rem; border-radius: 10px; cursor: pointer;
-        }
-        .num-btn:active { background: var(--primary); color: white; }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        body { background-color: var(--bg); color: var(--text); height: 100vh; overflow: hidden; }
 
-        /* --- APP LAYOUT --- */
-        #app-wrapper { display: none; height: 100%; overflow-y: auto; padding-bottom: 90px; }
-        .app-container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        /* --- AUTH --- */
+        #auth-overlay { position: fixed; inset: 0; background: var(--bg); z-index: 999; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        .pin-dots { font-size: 2rem; letter-spacing: 10px; margin: 20px; color: var(--text); }
+        .numpad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; }
+        .num-btn { padding: 20px; font-size: 1.2rem; border-radius: 50%; border: 1px solid var(--border); background: var(--card); color: var(--text); cursor: pointer; width: 70px; height: 70px; }
+        
+        /* --- LAYOUT --- */
+        #app-wrapper { display: none; height: 100%; overflow-y: auto; padding-bottom: 100px; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
         
         header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-        .brand { font-size: 1.8rem; font-weight: 800; color: var(--primary); }
+        .brand { font-size: 1.5rem; font-weight: 800; color: var(--primary); }
 
-        /* Navigation */
-        .nav-bar {
-            position: fixed; bottom: 0; left: 0; width: 100%; background: var(--nav-bg);
-            border-top: 1px solid var(--border); display: flex; justify-content: space-around;
-            padding: 12px 0; z-index: 100;
-        }
-        .nav-item {
-            background: none; border: none; color: var(--text-secondary);
-            font-size: 0.75rem; font-weight: 600; cursor: pointer;
-            display: flex; flex-direction: column; align-items: center; gap: 4px;
-        }
-        .nav-item.active { color: var(--primary); }
-        .nav-icon { font-size: 1.4rem; }
-
-        /* Components */
-        .section { display: none; animation: fadeIn 0.3s ease; }
-        .section.active { display: block; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
-
-        .card { background: var(--card); padding: 20px; border-radius: 16px; border: 1px solid var(--border); margin-bottom: 15px; }
+        /* --- CARDS & UI --- */
+        .card { background: var(--card); padding: 20px; border-radius: 16px; border: 1px solid var(--border); margin-bottom: 16px; }
+        .hero-card { background: linear-gradient(135deg, var(--primary), var(--primary-dark)); color: white; text-align: center; padding: 30px; border-radius: 20px; margin-bottom: 20px; }
         
-        .summary-box { 
-            text-align: center; padding: 30px; 
-            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); 
-            color: white; border-radius: 16px; margin-bottom: 20px; 
-        }
+        h2, h3 { margin-bottom: 10px; }
+        
+        /* --- TABS --- */
+        .tab-bar { position: fixed; bottom: 0; left: 0; width: 100%; background: var(--card); border-top: 1px solid var(--border); display: flex; justify-content: space-around; padding: 12px 0; z-index: 100; }
+        .tab-btn { background: none; border: none; color: var(--text-muted); font-size: 0.7rem; font-weight: 600; display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer; }
+        .tab-btn.active { color: var(--primary); }
+        .tab-icon { font-size: 1.4rem; }
 
-        /* Forms */
-        .form-group { margin-bottom: 15px; }
-        label { display: block; margin-bottom: 8px; font-size: 0.8rem; color: var(--text-secondary); font-weight: 700; text-transform: uppercase; }
-        input, select { 
-            width: 100%; padding: 14px; border: 1px solid var(--border); 
-            border-radius: 10px; font-size: 1rem; background: var(--input-bg); color: var(--text);
-        }
-        input:focus, select:focus { border-color: var(--primary); outline: none; }
-
-        /* Buttons */
-        .btn { width: 100%; padding: 15px; border: none; border-radius: 10px; font-weight: 700; cursor: pointer; margin-bottom: 10px; }
+        /* --- FORMS --- */
+        input, select { width: 100%; padding: 12px; margin-bottom: 15px; border-radius: 10px; border: 1px solid var(--border); background: var(--input-bg); color: var(--text); font-size: 1rem; }
+        .btn { width: 100%; padding: 14px; border: none; border-radius: 10px; font-weight: 700; cursor: pointer; font-size: 1rem; }
         .btn-primary { background: var(--primary); color: white; }
-        .btn-outline { background: var(--card); border: 1px solid var(--border); color: var(--text); }
-        .btn-danger { background: rgba(239, 68, 68, 0.1); color: var(--danger); }
-        .btn-logout { background: transparent; border: 1px solid var(--danger); color: var(--danger); padding: 5px 12px; border-radius: 8px; cursor: pointer; font-size: 0.85rem; }
+        .btn-sm { width: auto; padding: 8px 12px; font-size: 0.9rem; }
 
-        /* Lists & Search */
-        .search-bar { width: 100%; padding: 10px; margin-bottom: 15px; border-radius: 8px; border: 1px solid var(--border); background: var(--input-bg); color: var(--text); }
-        
+        /* --- FEATURES --- */
+        /* Progress Bar */
+        .progress-track { background: var(--input-bg); height: 10px; border-radius: 5px; overflow: hidden; margin-top: 5px; }
+        .progress-fill { height: 100%; background: var(--success); transition: width 0.3s; }
+        .over-budget { background: var(--danger); }
+
+        /* Toggle Switch for Transfer */
+        .mode-toggle { display: flex; background: var(--input-bg); padding: 5px; border-radius: 10px; margin-bottom: 20px; }
+        .mode-btn { flex: 1; padding: 10px; border: none; background: transparent; color: var(--text-muted); border-radius: 8px; cursor: pointer; font-weight: 600; }
+        .mode-btn.active { background: var(--card); color: var(--text); box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+
+        /* Lists */
         .list-item { display: flex; justify-content: space-between; align-items: center; padding: 15px 0; border-bottom: 1px solid var(--border); }
-        .icon-box { width: 40px; height: 40px; border-radius: 50%; background: var(--bg); display: flex; align-items: center; justify-content: center; font-size: 1.2rem; margin-right: 12px; }
-        .list-left { display: flex; align-items: center; }
-        .amount { font-weight: 700; }
-        .income { color: var(--success); }
-        .expense { color: var(--danger); }
-        .meta { font-size: 0.8rem; color: var(--text-secondary); }
-
-        /* Toggle Switch */
-        .theme-switch-wrapper { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .tag { padding: 4px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: bold; background: var(--input-bg); margin-right: 8px; }
     </style>
 </head>
 <body>
 
     <div id="auth-overlay">
-        <div class="auth-card">
-            <h1 style="color:var(--primary); margin-bottom:10px;">KASU</h1>
-            <h3 id="auth-title">Security Check</h3>
-            <p id="auth-subtitle" style="color:var(--text-secondary); margin-bottom: 10px;">Enter PIN</p>
-            <div class="pin-display" id="pinDisplay"></div>
-            <div class="numpad">
-                <button class="num-btn" onclick="pressNum(1)">1</button>
-                <button class="num-btn" onclick="pressNum(2)">2</button>
-                <button class="num-btn" onclick="pressNum(3)">3</button>
-                <button class="num-btn" onclick="pressNum(4)">4</button>
-                <button class="num-btn" onclick="pressNum(5)">5</button>
-                <button class="num-btn" onclick="pressNum(6)">6</button>
-                <button class="num-btn" onclick="pressNum(7)">7</button>
-                <button class="num-btn" onclick="pressNum(8)">8</button>
-                <button class="num-btn" onclick="pressNum(9)">9</button>
-                <button class="num-btn" onclick="clearPin()" style="color:var(--danger)">C</button>
-                <button class="num-btn" onclick="pressNum(0)">0</button>
-                <button class="num-btn" onclick="submitPin()" style="background:var(--primary); color:white;">→</button>
-            </div>
+        <h1 style="color:var(--primary); margin-bottom: 20px;">KASU</h1>
+        <div class="pin-dots" id="pinDisplay"></div>
+        <p id="authMsg" style="color:var(--text-muted);">Enter PIN</p>
+        <div class="numpad">
+            <button class="num-btn" onclick="inputPin(1)">1</button>
+            <button class="num-btn" onclick="inputPin(2)">2</button>
+            <button class="num-btn" onclick="inputPin(3)">3</button>
+            <button class="num-btn" onclick="inputPin(4)">4</button>
+            <button class="num-btn" onclick="inputPin(5)">5</button>
+            <button class="num-btn" onclick="inputPin(6)">6</button>
+            <button class="num-btn" onclick="inputPin(7)">7</button>
+            <button class="num-btn" onclick="inputPin(8)">8</button>
+            <button class="num-btn" onclick="inputPin(9)">9</button>
+            <button class="num-btn" onclick="clearPin()" style="color:var(--danger)">C</button>
+            <button class="num-btn" onclick="inputPin(0)">0</button>
+            <button class="num-btn" onclick="submitPin()" style="background:var(--primary); color:white;">→</button>
         </div>
     </div>
 
     <div id="app-wrapper">
-        <div class="app-container">
+        <div class="container">
             <header>
-                <div class="brand">KASU <span style="font-size:0.8rem; color:var(--text-secondary);">PRO</span></div>
-                <button class="btn-logout" onclick="logout()">🔒 Lock</button>
+                <div class="brand">KASU</div>
+                <button onclick="toggleTheme()" style="background:none; border:none; font-size:1.5rem; cursor:pointer;">🌗</button>
             </header>
 
-            <div id="view-overview" class="section active">
-                <div class="summary-box">
-                    <p>Total Balance</p>
-                    <h1 id="totalBalance">₹0.00</h1>
+            <div id="tab-home" class="view">
+                <div class="hero-card">
+                    <p>Total Net Worth</p>
+                    <h1 id="totalBalance" style="font-size: 2.5rem; margin: 10px 0;">₹0.00</h1>
                 </div>
                 
                 <div class="card">
-                    <h3 style="margin-bottom:15px;">Expense Analysis</h3>
-                    <div style="position: relative; height: 200px; width:100%">
+                    <h3>Spending Breakdown</h3>
+                    <div style="height: 200px; position: relative;">
                         <canvas id="expenseChart"></canvas>
                     </div>
                 </div>
 
                 <div class="card">
-                    <h3>Recent Activity</h3>
-                    <div id="recentHistoryList"></div>
+                    <h3>Recent Transactions</h3>
+                    <div id="recentList"></div>
                 </div>
             </div>
 
-            <div id="view-add" class="section">
+            <div id="tab-plan" class="view" style="display:none;">
                 <div class="card">
-                    <h2 style="margin-bottom: 20px;">New Entry</h2>
-                    <form onsubmit="handleTransaction(event)">
-                        <div class="form-group">
-                            <label>Amount (₹)</label>
-                            <input type="number" id="amount" step="0.01" placeholder="0.00" style="font-size: 1.5rem; font-weight:bold;" required>
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                        <h2>Budgets</h2>
+                        <button class="btn btn-sm btn-primary" onclick="showBudgetForm()">+ Set</button>
+                    </div>
+                    <div id="budgetList"></div>
+                    <div id="budgetForm" style="display:none; margin-top:15px; padding-top:15px; border-top:1px solid var(--border);">
+                        <select id="budgetCat">
+                            <option value="Food">Food</option>
+                            <option value="Transport">Transport</option>
+                            <option value="Shopping">Shopping</option>
+                            <option value="Entertainment">Entertainment</option>
+                        </select>
+                        <input type="number" id="budgetLimit" placeholder="Monthly Limit (₹)">
+                        <button class="btn btn-primary" onclick="saveBudget()">Save Budget</button>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                        <h2>Goals</h2>
+                        <button class="btn btn-sm btn-primary" onclick="showGoalForm()">+ New</button>
+                    </div>
+                    <div id="goalList"></div>
+                    <div id="goalForm" style="display:none; margin-top:15px; padding-top:15px; border-top:1px solid var(--border);">
+                        <input type="text" id="goalName" placeholder="Goal Name (e.g. Phone)">
+                        <input type="number" id="goalTarget" placeholder="Target Amount (₹)">
+                        <button class="btn btn-primary" onclick="createGoal()">Create Goal</button>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                        <h2>Bills & Subs</h2>
+                        <button class="btn btn-sm btn-primary" onclick="showBillForm()">+ Add</button>
+                    </div>
+                    <div id="billList"></div>
+                    <div id="billForm" style="display:none; margin-top:15px; padding-top:15px; border-top:1px solid var(--border);">
+                        <input type="text" id="billName" placeholder="Bill Name (e.g. Netflix)">
+                        <input type="number" id="billAmount" placeholder="Amount (₹)">
+                        <button class="btn btn-primary" onclick="addBill()">Add Bill</button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="tab-add" class="view" style="display:none;">
+                <div class="card">
+                    <div class="mode-toggle">
+                        <button class="mode-btn active" onclick="setMode('trans')" id="mode-trans">Transaction</button>
+                        <button class="mode-btn" onclick="setMode('transfer')" id="mode-transfer">Transfer</button>
+                    </div>
+
+                    <form onsubmit="handleSubmit(event)">
+                        <div style="text-align:center; margin-bottom:20px;">
+                            <input type="number" id="amount" placeholder="₹0.00" style="font-size:2rem; text-align:center; font-weight:bold; border:none; background:transparent;" required>
                         </div>
-                        <div class="form-group">
-                            <label>Description</label>
-                            <input type="text" id="desc" placeholder="Note (optional)">
+
+                        <div id="field-trans">
+                            <input type="text" id="desc" placeholder="Description (e.g. Lunch)">
+                            <select id="category">
+                                <option value="Food">Food</option>
+                                <option value="Transport">Transport</option>
+                                <option value="Shopping">Shopping</option>
+                                <option value="Entertainment">Entertainment</option>
+                                <option value="Bills">Bills</option>
+                                <option value="Salary">Salary</option>
+                                <option value="Other">Other</option>
+                            </select>
+                            <div style="display:flex; gap:10px; margin-bottom:15px;">
+                                <select id="type" style="margin:0;">
+                                    <option value="expense">Expense</option>
+                                    <option value="income">Income</option>
+                                </select>
+                                <select id="account" style="margin:0;" required></select>
+                            </div>
                         </div>
-                        <div class="form-group">
-                            <label>Category</label>
-                            <select id="category" required>
-                                <option value="Food">🍔 Food</option>
-                                <option value="Transport">🚌 Transport</option>
-                                <option value="Shopping">🛍️ Shopping</option>
-                                <option value="Entertainment">🎮 Games/Fun</option>
-                                <option value="Bills">🧾 Bills</option>
-                                <option value="Health">💊 Health</option>
-                                <option value="Education">📚 Education</option>
-                                <option value="Salary">💰 Salary/Pocket Money</option>
-                                <option value="Other">⚪ Other</option>
+
+                        <div id="field-transfer" style="display:none;">
+                            <p style="margin-bottom:10px; font-size:0.9rem;">Move money between accounts:</p>
+                            <select id="fromAccount" style="margin-bottom:10px;">
+                                <option value="" disabled selected>From Account</option>
+                            </select>
+                            <div style="text-align:center; font-size:1.5rem; margin-bottom:10px;">↓</div>
+                            <select id="toAccount">
+                                <option value="" disabled selected>To Account</option>
                             </select>
                         </div>
-                        <div class="form-group">
-                            <label>Type</label>
-                            <select id="type">
-                                <option value="expense">Expense (Out)</option>
-                                <option value="income">Income (In)</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label>Account</label>
-                            <select id="accountSelect" required></select>
-                        </div>
-                        <button type="submit" class="btn btn-primary">Save Transaction</button>
+
+                        <button type="submit" class="btn btn-primary">Confirm</button>
                     </form>
                 </div>
             </div>
 
-            <div id="view-accounts" class="section">
+            <div id="tab-more" class="view" style="display:none;">
                 <div class="card">
-                    <h2>Wallets</h2>
-                    <div id="accountsList"></div>
-                </div>
-                <div class="card">
-                    <h3>Add New Wallet</h3>
-                    <div class="form-group">
-                        <input type="text" id="newAccountName" placeholder="Name (e.g. Bank)">
-                    </div>
-                    <button class="btn btn-primary" onclick="addAccount()">Create</button>
-                </div>
-            </div>
-
-            <div id="view-settings" class="section">
-                <div class="card">
-                    <div class="theme-switch-wrapper">
-                        <h3>Dark Mode</h3>
-                        <input type="checkbox" id="theme-toggle" onchange="toggleTheme()">
+                    <h2>Your Wallets</h2>
+                    <div id="walletList"></div>
+                    <div style="margin-top:15px; display:flex; gap:10px;">
+                        <input type="text" id="newWallet" placeholder="New Wallet Name" style="margin:0;">
+                        <button class="btn btn-sm btn-primary" onclick="addWallet()">Add</button>
                     </div>
                 </div>
 
                 <div class="card">
-                    <h3>Search History</h3>
-                    <input type="text" class="search-bar" id="searchInput" onkeyup="filterHistory()" placeholder="Search by name or category...">
-                    <div id="fullHistoryList"></div>
-                </div>
-
-                <div class="card">
-                    <h3>Data Backup</h3>
-                    <button class="btn btn-outline" onclick="exportData()">⬇ Save Backup</button>
-                    <button class="btn btn-outline" onclick="document.getElementById('fileInput').click()">⬆ Load Backup</button>
-                    <input type="file" id="fileInput" style="display: none;" onchange="importData(this)">
-                    <button class="btn btn-danger" onclick="clearAllData()">Reset App</button>
+                    <h2>Data & Settings</h2>
+                    <button class="btn" style="border:1px solid var(--border); margin-bottom:10px;" onclick="exportData()">⬇ Export Backup</button>
+                    <button class="btn" style="border:1px solid var(--border); margin-bottom:10px;" onclick="document.getElementById('fileInput').click()">⬆ Import Backup</button>
+                    <input type="file" id="fileInput" style="display:none;" onchange="importData(this)">
+                    <button class="btn" style="color:var(--danger); border:1px solid var(--danger);" onclick="resetApp()">Reset App</button>
                 </div>
             </div>
-
         </div>
     </div>
 
-    <nav class="nav-bar" id="navBar" style="display:none;">
-        <button class="nav-item active" onclick="switchTab('overview')" id="btn-overview">
-            <span class="nav-icon">📊</span> Overview
+    <nav class="tab-bar" id="navBar" style="display:none;">
+        <button class="tab-btn active" onclick="switchTab('home')" id="btn-home">
+            <span class="tab-icon">🏠</span> Home
         </button>
-        <button class="nav-item" onclick="switchTab('add')" id="btn-add">
-            <span class="nav-icon">➕</span> Add
+        <button class="tab-btn" onclick="switchTab('plan')" id="btn-plan">
+            <span class="tab-icon">🎯</span> Plan
         </button>
-        <button class="nav-item" onclick="switchTab('accounts')" id="btn-accounts">
-            <span class="nav-icon">💳</span> Wallets
+        <button class="tab-btn" onclick="switchTab('add')" id="btn-add">
+            <span class="tab-icon" style="font-size:2rem; color:var(--primary); margin-top:-15px;">⊕</span>
         </button>
-        <button class="nav-item" onclick="switchTab('settings')" id="btn-settings">
-            <span class="nav-icon">⚙️</span> Settings
+        <button class="tab-btn" onclick="switchTab('more')" id="btn-more">
+            <span class="tab-icon">👛</span> More
         </button>
     </nav>
 
     <script>
-        // --- AUTH SYSTEM ---
-        let currentPinInput = "";
-        const storedPin = localStorage.getItem('kasu_user_pin');
-        
-        function checkAuthStatus() {
-            if (!storedPin) {
-                document.getElementById('auth-title').innerText = "Create PIN";
-                document.getElementById('auth-subtitle').innerText = "Set a security code";
-            }
+        // --- DATA STORE ---
+        let data = {
+            accounts: { "Cash": 0, "Bank": 0 },
+            transactions: [],
+            budgets: {}, // { "Food": 5000 }
+            goals: [],   // [ {id, name, target, saved} ]
+            bills: []    // [ {id, name, amount} ]
+        };
+
+        let currentPin = "";
+        let storedPin = localStorage.getItem('kasu_pin');
+        let chartInstance = null;
+        let addMode = 'trans'; // 'trans' or 'transfer'
+
+        // --- AUTH ---
+        function checkAuth() {
+            if(!storedPin) { document.getElementById('authMsg').innerText = "Create a new PIN"; }
         }
-        function pressNum(num) { if(currentPinInput.length < 4) { currentPinInput += num; updatePinDisplay(); } }
-        function clearPin() { currentPinInput = ""; updatePinDisplay(); }
-        function updatePinDisplay() { document.getElementById('pinDisplay').innerText = "•".repeat(currentPinInput.length); }
+        function inputPin(n) { if(currentPin.length<4) { currentPin+=n; updatePinUI(); } }
+        function clearPin() { currentPin=""; updatePinUI(); }
+        function updatePinUI() { document.getElementById('pinDisplay').innerText = "•".repeat(currentPin.length); }
         function submitPin() {
-            if (currentPinInput.length < 4) return;
-            if (!storedPin) {
-                localStorage.setItem('kasu_user_pin', currentPinInput);
-                unlockApp();
+            if(currentPin.length!==4) return;
+            if(!storedPin) {
+                localStorage.setItem('kasu_pin', currentPin);
+                unlock();
+            } else if(currentPin === storedPin) {
+                unlock();
             } else {
-                if (currentPinInput === storedPin) unlockApp();
-                else { alert("Wrong PIN"); clearPin(); }
+                alert("Wrong PIN"); clearPin();
             }
         }
-        function unlockApp() {
-            document.getElementById('auth-overlay').style.display = 'none';
-            document.getElementById('app-wrapper').style.display = 'block';
-            document.getElementById('navBar').style.display = 'flex';
-            initApp();
-        }
-        function logout() { location.reload(); }
-
-        // --- APP DATA & LOGIC ---
-        let accounts = JSON.parse(localStorage.getItem('kasu_accounts')) || { "Cash": 0 };
-        let transactions = JSON.parse(localStorage.getItem('kasu_transactions')) || [];
-        let myChart = null;
-
-        // Theme Logic
-        function loadTheme() {
-            const theme = localStorage.getItem('kasu_theme') || 'light';
-            document.documentElement.setAttribute('data-theme', theme);
-            document.getElementById('theme-toggle').checked = (theme === 'dark');
-        }
-        function toggleTheme() {
-            const current = document.documentElement.getAttribute('data-theme');
-            const newTheme = current === 'dark' ? 'light' : 'dark';
-            document.documentElement.setAttribute('data-theme', newTheme);
-            localStorage.setItem('kasu_theme', newTheme);
-            initApp(); // Re-render chart for color updates
+        function unlock() {
+            document.getElementById('auth-overlay').style.display='none';
+            document.getElementById('app-wrapper').style.display='block';
+            document.getElementById('navBar').style.display='flex';
+            loadData();
         }
 
-        function initApp() {
-            loadTheme();
-            renderOverview();
-            renderAccounts();
-            renderHistory(transactions); // Render full history initially
-        }
-
-        function switchTab(tabName) {
-            document.querySelectorAll('.section').forEach(el => el.classList.remove('active'));
-            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
-            document.getElementById(`view-${tabName}`).classList.add('active');
-            document.getElementById(`btn-${tabName}`).classList.add('active');
-            if(tabName === 'overview') renderOverview(); // Refresh chart on tab switch
-        }
-
-        function handleTransaction(e) {
-            e.preventDefault();
-            const desc = document.getElementById('desc').value || "No Description";
-            const amount = parseFloat(document.getElementById('amount').value);
-            const type = document.getElementById('type').value;
-            const category = document.getElementById('category').value;
-            const account = document.getElementById('accountSelect').value;
-
-            if(!account) { alert("Create a wallet first!"); switchTab('accounts'); return; }
-
-            if(type === 'income') accounts[account] += amount;
-            else accounts[account] -= amount;
-
-            const t = { 
-                id: Date.now(), 
-                desc, amount, type, account, category, 
-                date: new Date().toLocaleDateString() 
-            };
-            transactions.unshift(t);
-            saveData();
+        // --- CORE LOGIC ---
+        function loadData() {
+            const saved = localStorage.getItem('kasu_data');
+            if(saved) data = JSON.parse(saved);
             
-            document.getElementById('desc').value = '';
-            document.getElementById('amount').value = '';
-            switchTab('overview');
+            // Theme check
+            if(localStorage.getItem('kasu_theme') === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
+            
+            renderAll();
+        }
+        function saveData() {
+            localStorage.setItem('kasu_data', JSON.stringify(data));
+            renderAll();
         }
 
-        function addAccount() {
-            const name = document.getElementById('newAccountName').value.trim();
-            if(name && !accounts[name]) {
-                accounts[name] = 0; document.getElementById('newAccountName').value = '';
-                saveData(); renderAccounts();
-            }
-        }
-
-        function deleteAccount(name) {
-            if(confirm(`Delete ${name}?`)) { delete accounts[name]; saveData(); renderAccounts(); }
-        }
-
-        function deleteTransaction(id) {
-            if(!confirm("Delete this?")) return;
-            const t = transactions.find(t => t.id === id);
-            if(t) {
-                if(t.type === 'income') accounts[t.account] -= t.amount;
-                else accounts[t.account] += t.amount;
-                transactions = transactions.filter(x => x.id !== id);
-                saveData(); initApp();
-            }
+        function renderAll() {
+            renderHome();
+            renderWallets();
+            renderPlanning();
+            renderForms();
         }
 
         // --- RENDERERS ---
-        function renderOverview() {
-            const total = Object.values(accounts).reduce((a,b) => a+b, 0);
+        function renderHome() {
+            // Balance
+            const total = Object.values(data.accounts).reduce((a,b)=>a+b,0);
             document.getElementById('totalBalance').innerText = `₹${total.toFixed(2)}`;
-            
-            // Recent List
-            const list = document.getElementById('recentHistoryList');
-            list.innerHTML = '';
-            transactions.slice(0, 5).forEach(t => list.appendChild(createTransactionEl(t)));
-            if(transactions.length === 0) list.innerHTML = '<p style="text-align:center;color:#888;">No data yet.</p>';
 
+            // List
+            const list = document.getElementById('recentList');
+            list.innerHTML = "";
+            data.transactions.slice(0,5).forEach(t => {
+                const el = document.createElement('div');
+                el.className = 'list-item';
+                let sign = t.type === 'income' ? '+' : (t.type === 'expense' ? '-' : '↔');
+                let color = t.type === 'income' ? 'var(--success)' : (t.type === 'expense' ? 'var(--danger)' : 'var(--text)');
+                
+                el.innerHTML = `
+                    <div>
+                        <div style="font-weight:bold;">${t.desc}</div>
+                        <div style="font-size:0.8rem; color:var(--text-muted);">${t.date} • ${t.category || 'Transfer'}</div>
+                    </div>
+                    <div style="font-weight:bold; color:${color};">${sign}₹${t.amount}</div>
+                `;
+                list.appendChild(el);
+            });
+
+            // Chart
             renderChart();
         }
 
         function renderChart() {
             const ctx = document.getElementById('expenseChart').getContext('2d');
-            
-            // Calculate Category Totals for Expenses
-            const categories = {};
-            transactions.forEach(t => {
-                if(t.type === 'expense') {
-                    const cat = t.category || "Other";
-                    categories[cat] = (categories[cat] || 0) + t.amount;
-                }
+            const cats = {};
+            data.transactions.forEach(t => {
+                if(t.type === 'expense') cats[t.category] = (cats[t.category]||0) + t.amount;
             });
-
-            if (myChart) myChart.destroy(); // Destroy old chart to prevent overlap
-
-            // Theme Colors
-            const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-            const textColor = isDark ? '#fff' : '#333';
-
-            if(Object.keys(categories).length === 0) {
-                // Empty chart placeholder
-                return; 
-            }
-
-            myChart = new Chart(ctx, {
+            
+            if(chartInstance) chartInstance.destroy();
+            chartInstance = new Chart(ctx, {
                 type: 'doughnut',
                 data: {
-                    labels: Object.keys(categories),
+                    labels: Object.keys(cats),
                     datasets: [{
-                        data: Object.values(categories),
-                        backgroundColor: ['#4f46e5', '#10b981', '#ef4444', '#f59e0b', '#ec4899', '#6366f1'],
-                        borderWidth: 0
+                        data: Object.values(cats),
+                        backgroundColor: ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#ec4899']
                     }]
                 },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: { position: 'right', labels: { color: textColor } }
-                    }
-                }
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right' } } }
             });
         }
 
-        function renderAccounts() {
-            const list = document.getElementById('accountsList');
-            const select = document.getElementById('accountSelect');
-            list.innerHTML = ''; select.innerHTML = '';
-            for(const [name, bal] of Object.entries(accounts)) {
+        function renderWallets() {
+            const list = document.getElementById('walletList');
+            list.innerHTML = "";
+            const select = document.getElementById('account');
+            const from = document.getElementById('fromAccount');
+            const to = document.getElementById('toAccount');
+            
+            select.innerHTML = ""; from.innerHTML = "<option disabled selected>From</option>"; to.innerHTML = "<option disabled selected>To</option>";
+
+            for(const [k,v] of Object.entries(data.accounts)) {
+                // List UI
                 const div = document.createElement('div');
                 div.className = 'list-item';
-                div.innerHTML = `<div class="list-left"><div class="icon-box">💰</div><div><strong>${name}</strong></div></div><div><span>₹${bal.toFixed(2)}</span><button onclick="deleteAccount('${name}')" style="background:none;border:none;color:red;margin-left:10px;">×</button></div>`;
+                div.innerHTML = `<strong>${k}</strong> <span>₹${v.toFixed(2)}</span>`;
                 list.appendChild(div);
-                const opt = document.createElement('option');
-                opt.value = name; opt.innerText = name;
-                select.appendChild(opt);
+
+                // Select UI
+                [select, from, to].forEach(el => {
+                    const opt = document.createElement('option');
+                    opt.value = k; opt.innerText = k;
+                    el.appendChild(opt);
+                });
             }
         }
 
-        function renderHistory(data) {
-            const list = document.getElementById('fullHistoryList');
-            list.innerHTML = '';
-            data.forEach(t => list.appendChild(createTransactionEl(t)));
-            if(data.length === 0) list.innerHTML = '<p style="padding:10px; text-align:center; color:#888;">No match found.</p>';
-        }
-
-        function filterHistory() {
-            const term = document.getElementById('searchInput').value.toLowerCase();
-            const filtered = transactions.filter(t => 
-                (t.desc && t.desc.toLowerCase().includes(term)) || 
-                (t.category && t.category.toLowerCase().includes(term)) ||
-                (t.amount.toString().includes(term))
-            );
-            renderHistory(filtered);
-        }
-
-        function createTransactionEl(t) {
-            const div = document.createElement('div');
-            div.className = 'list-item';
-            const color = t.type === 'income' ? 'income' : 'expense';
-            const sign = t.type === 'income' ? '+' : '-';
-            const catIcon = getCategoryIcon(t.category);
+        function renderPlanning() {
+            // Budgets
+            const bList = document.getElementById('budgetList');
+            bList.innerHTML = "";
             
-            div.innerHTML = `
-                <div class="list-left">
-                    <div class="icon-box">${catIcon}</div>
-                    <div>
-                        <div style="font-weight:600;">${t.desc}</div>
-                        <div class="meta">${t.category || 'General'} • ${t.date}</div>
+            // Calculate spent per category
+            const spent = {};
+            data.transactions.forEach(t => {
+                if(t.type==='expense') spent[t.category] = (spent[t.category]||0) + t.amount;
+            });
+
+            if(Object.keys(data.budgets).length === 0) bList.innerHTML = "<p style='color:#888; text-align:center;'>No budgets set.</p>";
+
+            for(const [cat, limit] of Object.entries(data.budgets)) {
+                const used = spent[cat] || 0;
+                const pct = Math.min((used/limit)*100, 100);
+                const colorClass = used > limit ? 'over-budget' : '';
+                
+                const div = document.createElement('div');
+                div.style.marginBottom = "15px";
+                div.innerHTML = `
+                    <div style="display:flex; justify-content:space-between; font-size:0.9rem;">
+                        <span>${cat}</span>
+                        <span>₹${used} / ₹${limit}</span>
                     </div>
-                </div>
-                <div style="text-align:right;">
-                    <div class="amount ${color}">${sign}₹${t.amount.toFixed(2)}</div>
-                    <div class="meta" onclick="deleteTransaction(${t.id})" style="cursor:pointer;text-decoration:underline;">Delete</div>
-                </div>
-            `;
-            return div;
+                    <div class="progress-track">
+                        <div class="progress-fill ${colorClass}" style="width:${pct}%"></div>
+                    </div>
+                `;
+                bList.appendChild(div);
+            }
+
+            // Goals
+            const gList = document.getElementById('goalList');
+            gList.innerHTML = "";
+            if(data.goals.length === 0) gList.innerHTML = "<p style='color:#888; text-align:center;'>No goals set.</p>";
+            
+            data.goals.forEach(g => {
+                const pct = Math.min((g.saved/g.target)*100, 100);
+                const div = document.createElement('div');
+                div.className = "card";
+                div.style.background = "var(--input-bg)";
+                div.style.border = "none";
+                div.innerHTML = `
+                    <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
+                        <strong>${g.name}</strong>
+                        <span style="font-size:0.8rem;">₹${g.saved} / ₹${g.target}</span>
+                    </div>
+                    <div class="progress-track" style="margin-bottom:10px;">
+                        <div class="progress-fill" style="width:${pct}%"></div>
+                    </div>
+                    <button class="btn btn-sm btn-primary" onclick="contributeGoal(${g.id})">+ Add Money</button>
+                    <button class="btn btn-sm" style="color:red; background:none;" onclick="deleteGoal(${g.id})">Delete</button>
+                `;
+                gList.appendChild(div);
+            });
+
+            // Bills
+            const billList = document.getElementById('billList');
+            billList.innerHTML = "";
+            if(data.bills.length === 0) billList.innerHTML = "<p style='color:#888; text-align:center;'>No bills added.</p>";
+
+            data.bills.forEach(b => {
+                const div = document.createElement('div');
+                div.className = 'list-item';
+                div.innerHTML = `
+                    <div>${b.name} (₹${b.amount})</div>
+                    <div>
+                        <button class="btn btn-sm btn-primary" onclick="payBill('${b.name}', ${b.amount})">Pay</button>
+                        <button style="border:none; background:none; color:red; margin-left:5px;" onclick="deleteBill(${b.id})">×</button>
+                    </div>
+                `;
+                billList.appendChild(div);
+            });
         }
 
-        function getCategoryIcon(cat) {
-            const icons = { 'Food':'🍔', 'Transport':'🚌', 'Shopping':'🛍️', 'Entertainment':'🎮', 'Bills':'🧾', 'Health':'💊', 'Education':'📚', 'Salary':'💰' };
-            return icons[cat] || '⚪';
+        // --- ACTIONS ---
+
+        // 1. Transaction & Transfer
+        function setMode(mode) {
+            addMode = mode;
+            document.getElementById('mode-trans').className = mode==='trans' ? 'mode-btn active' : 'mode-btn';
+            document.getElementById('mode-transfer').className = mode==='transfer' ? 'mode-btn active' : 'mode-btn';
+            document.getElementById('field-trans').style.display = mode==='trans' ? 'block' : 'none';
+            document.getElementById('field-transfer').style.display = mode==='transfer' ? 'block' : 'none';
         }
 
-        // --- SYSTEM ---
-        function saveData() {
-            localStorage.setItem('kasu_accounts', JSON.stringify(accounts));
-            localStorage.setItem('kasu_transactions', JSON.stringify(transactions));
-            initApp();
+        function handleSubmit(e) {
+            e.preventDefault();
+            const amount = parseFloat(document.getElementById('amount').value);
+            if(!amount) return;
+
+            if(addMode === 'trans') {
+                const desc = document.getElementById('desc').value || 'Unknown';
+                const cat = document.getElementById('category').value;
+                const type = document.getElementById('type').value;
+                const acc = document.getElementById('account').value;
+
+                if(type === 'expense') data.accounts[acc] -= amount;
+                else data.accounts[acc] += amount;
+
+                data.transactions.unshift({ id: Date.now(), date: new Date().toLocaleDateString(), desc, amount, type, category: cat, account: acc });
+
+            } else {
+                // Transfer
+                const from = document.getElementById('fromAccount').value;
+                const to = document.getElementById('toAccount').value;
+                if(!from || !to || from === to) { alert("Invalid accounts"); return; }
+
+                data.accounts[from] -= amount;
+                data.accounts[to] += amount;
+                data.transactions.unshift({ id: Date.now(), date: new Date().toLocaleDateString(), desc: `Transfer to ${to}`, amount, type: 'transfer', category: 'Transfer', account: from });
+            }
+
+            saveData();
+            document.getElementById('amount').value = "";
+            document.getElementById('desc').value = "";
+            switchTab('home');
         }
+
+        // 2. Wallets
+        function addWallet() {
+            const name = document.getElementById('newWallet').value;
+            if(name && !data.accounts[name]) {
+                data.accounts[name] = 0;
+                saveData();
+                document.getElementById('newWallet').value = "";
+            }
+        }
+
+        // 3. Budgets
+        function showBudgetForm() { document.getElementById('budgetForm').style.display = 'block'; }
+        function saveBudget() {
+            const cat = document.getElementById('budgetCat').value;
+            const limit = parseFloat(document.getElementById('budgetLimit').value);
+            if(limit) {
+                data.budgets[cat] = limit;
+                saveData();
+                document.getElementById('budgetForm').style.display = 'none';
+            }
+        }
+
+        // 4. Goals
+        function showGoalForm() { document.getElementById('goalForm').style.display = 'block'; }
+        function createGoal() {
+            const name = document.getElementById('goalName').value;
+            const target = parseFloat(document.getElementById('goalTarget').value);
+            if(name && target) {
+                data.goals.push({ id: Date.now(), name, target, saved: 0 });
+                saveData();
+                document.getElementById('goalForm').style.display = 'none';
+            }
+        }
+        function contributeGoal(id) {
+            const amt = prompt("How much to add?");
+            if(amt) {
+                const val = parseFloat(amt);
+                const g = data.goals.find(x => x.id === id);
+                // Deduct from cash by default for simplicity, or ask user. 
+                // For simplicity: We just track "Saved" amount, we don't move real money in this version unless we ask source.
+                // Let's keep it virtual for now to keep it simple.
+                g.saved += val;
+                saveData();
+            }
+        }
+        function deleteGoal(id) {
+            data.goals = data.goals.filter(x => x.id !== id);
+            saveData();
+        }
+
+        // 5. Bills
+        function showBillForm() { document.getElementById('billForm').style.display = 'block'; }
+        function addBill() {
+            const name = document.getElementById('billName').value;
+            const amount = parseFloat(document.getElementById('billAmount').value);
+            if(name && amount) {
+                data.bills.push({ id: Date.now(), name, amount });
+                saveData();
+                document.getElementById('billForm').style.display = 'none';
+            }
+        }
+        function payBill(name, amount) {
+            if(confirm(`Pay bill "${name}" for ₹${amount}?`)) {
+                // Determine account? Defaults to first available or Cash
+                const acc = Object.keys(data.accounts)[0];
+                data.accounts[acc] -= amount;
+                data.transactions.unshift({ 
+                    id: Date.now(), date: new Date().toLocaleDateString(), 
+                    desc: `Paid Bill: ${name}`, amount, type: 'expense', category: 'Bills', account: acc 
+                });
+                saveData();
+                alert("Bill Paid!");
+                switchTab('home');
+            }
+        }
+        function deleteBill(id) {
+            data.bills = data.bills.filter(b => b.id !== id);
+            saveData();
+        }
+
+        // --- UTILS ---
+        function switchTab(tab) {
+            document.querySelectorAll('.view').forEach(e => e.style.display = 'none');
+            document.querySelectorAll('.tab-btn').forEach(e => e.classList.remove('active'));
+            document.getElementById(`tab-${tab}`).style.display = 'block';
+            document.getElementById(`btn-${tab}`).classList.add('active');
+            renderAll();
+        }
+
+        function toggleTheme() {
+            const current = document.documentElement.getAttribute('data-theme');
+            const target = current === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', target);
+            localStorage.setItem('kasu_theme', target);
+            renderChart();
+        }
+
         function exportData() {
-            const data = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify({accounts, transactions}));
-            const a = document.createElement('a'); a.href = data; a.download = 'kasu_backup.json'; a.click();
+            const blob = new Blob([JSON.stringify(data)], {type: 'application/json'});
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = 'kasu_backup.json';
+            a.click();
         }
         function importData(input) {
-            const file = input.files[0]; if(!file) return;
             const reader = new FileReader();
-            reader.onload = (e) => {
-                try {
-                    const d = JSON.parse(e.target.result);
-                    if(d.accounts && d.transactions) { accounts = d.accounts; transactions = d.transactions; saveData(); alert("Success!"); }
-                } catch(err) { alert("Error"); }
-            }; reader.readAsText(file);
+            reader.onload = e => {
+                data = JSON.parse(e.target.result);
+                saveData();
+                alert("Imported!");
+            };
+            reader.readAsText(input.files[0]);
         }
-        function clearAllData() { if(confirm("Reset everything?")) { localStorage.clear(); location.reload(); } }
+        function resetApp() {
+            if(confirm("Reset everything?")) { localStorage.clear(); location.reload(); }
+        }
 
-        // Start
-        checkAuthStatus();
+        // START
+        checkAuth();
     </script>
 </body>
 </html>
