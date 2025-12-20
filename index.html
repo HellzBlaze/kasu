@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>KASU Ultimate V4</title>
+    <title>KASU V6</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
@@ -43,7 +43,7 @@
         .flex-center { display: flex; justify-content: center; align-items: center; }
         h2 { font-size: 1.2rem; font-weight: 600; margin-bottom: 15px; }
         
-        /* --- TOAST NOTIFICATIONS --- */
+        /* --- TOAST --- */
         #toast-container { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 3000; width: 90%; max-width: 400px; pointer-events: none; }
         .toast {
             background: var(--surface); color: var(--text); padding: 12px 20px; border-radius: 50px;
@@ -52,6 +52,7 @@
         }
         .toast.success { border-left: 4px solid var(--success); }
         .toast.error { border-left: 4px solid var(--danger); }
+        .toast.info { border-left: 4px solid var(--primary); }
         @keyframes slideDown { from { transform: translateY(-20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
 
         /* --- AUTH --- */
@@ -83,7 +84,6 @@
         .filter-container::-webkit-scrollbar { display: none; }
         .filter-chip { display: inline-block; padding: 8px 16px; border-radius: 20px; background: var(--input-bg); color: var(--text-muted); font-size: 0.85rem; font-weight: 600; margin-right: 8px; cursor: pointer; border: 1px solid transparent; transition: 0.2s; }
         .filter-chip.active { background: var(--primary); color: white; box-shadow: 0 4px 10px rgba(99, 102, 241, 0.3); }
-        
         .date-range-box { display: none; gap: 10px; margin-bottom: 15px; animation: fadeIn 0.3s; }
         .date-range-box.show { display: flex; }
         .date-input { flex: 1; padding: 10px; border-radius: 12px; border: 1px solid var(--border); background: var(--surface); color: var(--text); font-family: 'Poppins'; }
@@ -97,7 +97,8 @@
         .btn:active { transform: scale(0.98); }
         .btn-primary { background: var(--primary-grad); color: white; box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4); }
         .btn-ghost { background: transparent; color: var(--text-muted); width: auto; padding: 5px 10px; font-size: 0.9rem; }
-        .btn-icon-only { width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: var(--input-bg); color: var(--text); border: none; cursor: pointer; }
+        .btn-icon-only { width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: var(--input-bg); color: var(--text); border: none; cursor: pointer; transition: 0.2s; }
+        .btn-icon-only:active { background: var(--primary); color: white; }
 
         /* Visual Category Grid */
         .cat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 20px; }
@@ -179,13 +180,9 @@
                 <div class="filter-container">
                     <div class="filter-chip active" onclick="applyFilter(this, 'all')">All</div>
                     <div class="filter-chip" onclick="applyFilter(this, 'today')">Today</div>
-                    <div class="filter-chip" onclick="applyFilter(this, 'yesterday')">Yesterday</div>
-                    <div class="filter-chip" onclick="applyFilter(this, 'week')">Last 7 Days</div>
-                    <div class="filter-chip" onclick="applyFilter(this, 'month')">Last 30 Days</div>
-                    <div class="filter-chip" onclick="applyFilter(this, '3months')">3 Months</div>
-                    <div class="filter-chip" onclick="applyFilter(this, '6months')">6 Months</div>
+                    <div class="filter-chip" onclick="applyFilter(this, 'month')">Month</div>
                     <div class="filter-chip" onclick="applyFilter(this, 'year')">Year</div>
-                    <div class="filter-chip" onclick="toggleCustomDate(this)">Custom Range</div>
+                    <div class="filter-chip" onclick="toggleCustomDate(this)">Custom</div>
                 </div>
 
                 <div id="customDateBox" class="date-range-box">
@@ -207,6 +204,29 @@
             </div>
 
             <div id="tab-plan" class="view" style="display:none;">
+                
+                <div class="card" style="border-left: 4px solid var(--primary);">
+                    <div class="flex-between"><h2>Recurring</h2><button class="btn-ghost" onclick="showRecurForm()">+ Auto</button></div>
+                    <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:10px;">Auto-add salaries or subscriptions.</p>
+                    <div id="recurList"></div>
+                    
+                    <div id="recurForm" style="display:none; margin-top:15px; border-top:1px solid var(--border); padding-top:15px;">
+                        <input type="text" id="recurDesc" placeholder="Name (e.g. Salary, Netflix)">
+                        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+                            <input type="number" id="recurAmount" placeholder="Amount">
+                            <input type="number" id="recurDay" placeholder="Day (1-31)" min="1" max="31">
+                        </div>
+                        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+                            <select id="recurType">
+                                <option value="income">Income (+)</option>
+                                <option value="expense">Expense (-)</option>
+                            </select>
+                            <select id="recurAcc"></select>
+                        </div>
+                        <button class="btn btn-primary" onclick="addRecur()">Set Auto-Rule</button>
+                    </div>
+                </div>
+
                 <div class="card">
                     <div class="flex-between"><h2>Budgets</h2><button class="btn-ghost" onclick="showBudgetForm()">+ Add</button></div>
                     <div id="budgetList"></div>
@@ -221,8 +241,8 @@
                     <div class="flex-between"><h2>Goals</h2><button class="btn-ghost" onclick="showGoalForm()">+ New</button></div>
                     <div id="goalList"></div>
                     <div id="goalForm" style="display:none; margin-top:15px; border-top:1px solid var(--border); padding-top:15px;">
-                        <input type="text" id="goalName" placeholder="Name (e.g. Phone)">
-                        <input type="number" id="goalTarget" placeholder="Target (₹)">
+                        <input type="text" id="goalName" placeholder="Name">
+                        <input type="number" id="goalTarget" placeholder="Target">
                         <button class="btn btn-primary" onclick="createGoal()">Create Goal</button>
                     </div>
                 </div>
@@ -231,8 +251,8 @@
                     <div class="flex-between"><h2>Bills</h2><button class="btn-ghost" onclick="showBillForm()">+ Add</button></div>
                     <div id="billList"></div>
                     <div id="billForm" style="display:none; margin-top:15px; border-top:1px solid var(--border); padding-top:15px;">
-                        <input type="text" id="billName" placeholder="Name (e.g. Netflix)">
-                        <input type="number" id="billAmount" placeholder="Amount (₹)">
+                        <input type="text" id="billName" placeholder="Name">
+                        <input type="number" id="billAmount" placeholder="Amount">
                         <button class="btn btn-primary" onclick="addBill()">Save Bill</button>
                     </div>
                 </div>
@@ -252,18 +272,12 @@
                         </div>
 
                         <div id="field-trans">
-                            <input type="text" id="desc" placeholder="Note (e.g. Coffee, Taxi)">
-                            
+                            <input type="text" id="desc" placeholder="Note">
                             <label style="font-size:0.85rem; color:var(--text-muted); margin-bottom:10px; display:block;">Category</label>
-                            <div class="cat-grid" id="categoryGrid">
-                                </div>
+                            <div class="cat-grid" id="categoryGrid"></div>
                             <input type="hidden" id="selectedCategory" value="Food">
-                            
                             <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-top:15px;">
-                                <select id="type" style="margin:0;">
-                                    <option value="expense">Expense</option>
-                                    <option value="income">Income</option>
-                                </select>
+                                <select id="type" style="margin:0;"><option value="expense">Expense</option><option value="income">Income</option></select>
                                 <select id="account" style="margin:0;" required></select>
                             </div>
                         </div>
@@ -284,6 +298,7 @@
             <div id="tab-more" class="view" style="display:none;">
                 <div class="card">
                     <h2>Wallets</h2>
+                    <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:10px;">Use ↑ ↓ arrows to rearrange.</p>
                     <div id="walletList"></div>
                     <div style="margin-top:20px; display:flex; gap:10px;">
                         <input type="text" id="newWallet" placeholder="Wallet Name" style="margin:0;">
@@ -323,8 +338,10 @@
         // --- DATA STORE ---
         let data = { 
             accounts: { "Cash": 0, "Bank": 0 }, 
+            accountOrder: ["Cash", "Bank"], 
             transactions: [], budgets: {}, goals: [], bills: [],
-            categories: ["Food", "Transport", "Shopping", "Entertainment", "Bills", "Health", "Education", "Salary"]
+            categories: ["Food", "Transport", "Shopping", "Entertainment", "Bills", "Health", "Education", "Salary"],
+            recurring: [] 
         };
         let currentPin = "";
         let storedPin = localStorage.getItem('kasu_pin');
@@ -338,9 +355,9 @@
         function updatePinUI() { document.getElementById('pinDisplay').innerText = "•".repeat(currentPin.length); }
         function submitPin() {
             if(currentPin.length!==4) return;
-            if(!storedPin) { localStorage.setItem('kasu_pin', currentPin); unlock(); showToast("PIN Set Successfully!", "success"); } 
+            if(!storedPin) { localStorage.setItem('kasu_pin', currentPin); unlock(); showToast("PIN Set!", "success"); } 
             else if(currentPin === storedPin) { unlock(); } 
-            else { showToast("Incorrect PIN", "error"); clearPin(); }
+            else { showToast("Wrong PIN", "error"); clearPin(); }
         }
         function unlock() {
             document.getElementById('auth-overlay').style.opacity = '0';
@@ -349,6 +366,31 @@
             document.getElementById('navBar').style.display='flex';
             loadData();
             setGreeting();
+            processRecurring();
+        }
+
+        // --- RECURRING LOGIC ---
+        function processRecurring() {
+            const now = new Date();
+            let changed = false;
+            data.recurring.forEach(r => {
+                const last = new Date(r.lastRun || 0);
+                if((now.getMonth() !== last.getMonth() || now.getFullYear() !== last.getFullYear()) && now.getDate() >= r.day) {
+                    data.transactions.unshift({
+                        id: Date.now() + Math.random(), 
+                        desc: "Auto: " + r.desc,
+                        amount: r.amount,
+                        type: r.type,
+                        category: "Bills",
+                        account: r.account
+                    });
+                    if(r.type==='expense') data.accounts[r.account]-=r.amount; else data.accounts[r.account]+=r.amount;
+                    r.lastRun = now.getTime();
+                    changed = true;
+                    showToast("Processed Auto-Pay: " + r.desc, "info");
+                }
+            });
+            if(changed) saveData();
         }
 
         // --- CORE ---
@@ -357,7 +399,9 @@
             if(saved) {
                 const parsed = JSON.parse(saved);
                 data = { ...data, ...parsed };
-                if(!data.categories || data.categories.length === 0) data.categories = ["Food", "Transport", "Shopping", "Bills"];
+                // Fix missing fields for old backups
+                if(!data.accountOrder || data.accountOrder.length === 0) data.accountOrder = Object.keys(data.accounts);
+                if(!data.recurring) data.recurring = [];
             }
             if(localStorage.getItem('kasu_theme') === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
             renderAll();
@@ -366,7 +410,7 @@
         function renderAll() { renderHome(); renderWallets(); renderPlanning(); renderCategoryUI(); }
         function showToast(msg, type='success') {
             const t = document.createElement('div'); t.className = `toast ${type}`;
-            t.innerHTML = type==='success'?'✅ '+msg : '⚠️ '+msg;
+            t.innerHTML = type==='success'?'✅ '+msg : (type==='info'?'ℹ️ '+msg:'⚠️ '+msg);
             document.getElementById('toast-container').appendChild(t);
             setTimeout(() => t.remove(), 3000);
         }
@@ -376,95 +420,57 @@
             document.getElementById('greeting').innerText = g;
         }
 
-        // --- FILTER LOGIC ---
+        // --- FILTER ---
         function applyFilter(el, type) {
             currentFilter = type;
             document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
             if(el) el.classList.add('active');
-            
-            // Hide custom inputs unless 'custom' logic is handled elsewhere or needed
             document.getElementById('customDateBox').classList.remove('show');
             renderHome();
         }
-        
         function toggleCustomDate(el) {
             currentFilter = 'custom';
             document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
             el.classList.add('active');
             document.getElementById('customDateBox').classList.add('show');
         }
-
-        function applyCustomFilter() {
-            renderHome(); // Triggers re-render based on input values
-        }
-
+        function applyCustomFilter() { renderHome(); }
         function getFilteredTransactions() {
             const now = new Date();
             const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
             let filtered = data.transactions;
-
-            if (currentFilter === 'today') {
-                filtered = filtered.filter(t => t.id >= startOfDay);
-            } else if (currentFilter === 'yesterday') {
-                filtered = filtered.filter(t => t.id >= startOfDay - 86400000 && t.id < startOfDay);
-            } else if (currentFilter === 'week') {
-                filtered = filtered.filter(t => t.id >= now.getTime() - (7 * 86400000));
-            } else if (currentFilter === 'month') {
-                filtered = filtered.filter(t => t.id >= now.getTime() - (30 * 86400000));
-            } else if (currentFilter === '3months') {
-                filtered = filtered.filter(t => t.id >= now.getTime() - (90 * 86400000));
-            } else if (currentFilter === '6months') {
-                filtered = filtered.filter(t => t.id >= now.getTime() - (180 * 86400000));
-            } else if (currentFilter === 'year') {
-                filtered = filtered.filter(t => t.id >= now.getTime() - (365 * 86400000));
-            } else if (currentFilter === 'custom') {
+            if (currentFilter === 'today') filtered = filtered.filter(t => t.id >= startOfDay);
+            else if (currentFilter === 'today') filtered = filtered.filter(t => t.id >= startOfDay); // Duplicate logic removed in prod
+            else if (currentFilter === 'month') filtered = filtered.filter(t => t.id >= now.getTime() - (30 * 86400000));
+            else if (currentFilter === 'year') filtered = filtered.filter(t => t.id >= now.getTime() - (365 * 86400000));
+            else if (currentFilter === 'custom') {
                 const s = document.getElementById('startDate').valueAsDate;
                 const e = document.getElementById('endDate').valueAsDate;
-                if(s && e) {
-                    // Set End Date to end of that day
-                    e.setHours(23, 59, 59, 999);
-                    filtered = filtered.filter(t => t.id >= s.getTime() && t.id <= e.getTime());
-                }
+                if(s && e) { e.setHours(23, 59, 59, 999); filtered = filtered.filter(t => t.id >= s.getTime() && t.id <= e.getTime()); }
             }
             return filtered;
         }
 
-
         // --- RENDERERS ---
         function renderHome() {
-            // Balance is always total, regardless of filter (standard practice)
             const total = Object.values(data.accounts).reduce((a,b)=>a+b,0);
             document.getElementById('totalBalance').innerText = total.toLocaleString('en-IN', {minimumFractionDigits: 2});
-
             const filteredTx = getFilteredTransactions();
-            const list = document.getElementById('recentList');
-            list.innerHTML = "";
-            
-            if(filteredTx.length===0) { 
-                list.innerHTML = "<p style='text-align:center;color:var(--text-muted);padding:20px;'>No transactions found for this period.</p>"; 
-                renderChart([]); 
-                return; 
-            }
+            const list = document.getElementById('recentList'); list.innerHTML = "";
+            if(filteredTx.length===0) { list.innerHTML = "<p style='text-align:center;color:var(--text-muted);padding:20px;'>No transactions found.</p>"; renderChart([]); return; }
 
-            // Sort Desc
             filteredTx.sort((a,b) => b.id - a.id);
-            
-            // Group By Date
             let lastDate = "";
             filteredTx.forEach(t => {
                 const dateObj = new Date(t.id);
                 const today = new Date();
                 const yesterday = new Date(today); yesterday.setDate(yesterday.getDate() - 1);
-                
                 let dateStr = dateObj.toLocaleDateString();
                 if(dateObj.toDateString() === today.toDateString()) dateStr = "Today";
                 else if(dateObj.toDateString() === yesterday.toDateString()) dateStr = "Yesterday";
                 else dateStr = dateObj.toLocaleDateString('en-US', {month:'short', day:'numeric'});
 
-                if(dateStr !== lastDate) {
-                    list.innerHTML += `<div class="date-header">${dateStr}</div>`;
-                    lastDate = dateStr;
-                }
+                if(dateStr !== lastDate) { list.innerHTML += `<div class="date-header">${dateStr}</div>`; lastDate = dateStr; }
 
                 const timeStr = dateObj.toLocaleString('en-US', { hour: 'numeric', minute: 'numeric', hour12: true });
                 const isInc = t.type === 'income';
@@ -473,87 +479,21 @@
                 const icon = t.type==='transfer'?'↔':(isInc?'↓':'↑');
                 const catIcon = getCatIcon(t.category);
 
-                list.innerHTML += `
-                    <div class="list-item">
-                        <div style="display:flex; align-items:center;">
-                            <div class="icon-box" style="font-size:1rem;">${t.type==='transfer'?icon:catIcon}</div>
-                            <div>
-                                <div style="font-weight:600; font-size:0.95rem;">${t.desc}</div>
-                                <div class="timestamp">${timeStr} • ${t.category}</div>
-                            </div>
-                        </div>
-                        <div style="text-align:right;">
-                            <div style="font-weight:600; color:${color};">${sign}₹${t.amount}</div>
-                            <button onclick="delTrans(${t.id})" style="border:none;background:none;color:var(--text-muted);opacity:0.5;padding:5px;">🗑</button>
-                        </div>
-                    </div>
-                `;
+                list.innerHTML += `<div class="list-item"><div style="display:flex; align-items:center;"><div class="icon-box" style="font-size:1rem;">${t.type==='transfer'?icon:catIcon}</div><div><div style="font-weight:600; font-size:0.95rem;">${t.desc}</div><div class="timestamp">${timeStr} • ${t.category}</div></div></div><div style="text-align:right;"><div style="font-weight:600; color:${color};">${sign}₹${t.amount}</div><button onclick="delTrans(${t.id})" style="border:none;background:none;color:var(--text-muted);opacity:0.5;padding:5px;">🗑</button></div></div>`;
             });
             renderChart(filteredTx);
-        }
-
-        function renderCategoryUI() {
-            // 1. Grid in Add Tab
-            const grid = document.getElementById('categoryGrid');
-            grid.innerHTML = '';
-            const currentSel = document.getElementById('selectedCategory').value;
-            
-            data.categories.forEach(c => {
-                const div = document.createElement('div');
-                div.className = `cat-item ${currentSel === c ? 'selected' : ''}`;
-                div.onclick = () => selectCategory(c);
-                div.innerHTML = `
-                    <div class="cat-icon-circle">${getCatIcon(c)}</div>
-                    <span class="cat-label">${c}</span>
-                `;
-                grid.appendChild(div);
-            });
-
-            // 2. Budget Dropdown
-            const bSel = document.getElementById('budgetCat');
-            if(bSel) {
-                bSel.innerHTML = '';
-                data.categories.forEach(c => { bSel.innerHTML += `<option value="${c}">${c}</option>`; });
-            }
-
-            // 3. Manage List
-            const mList = document.getElementById('manageCatList');
-            if(mList) {
-                mList.innerHTML = '';
-                data.categories.forEach(c => {
-                    mList.innerHTML += `<span style="background:var(--input-bg); padding:6px 12px; border-radius:12px; font-size:0.85rem;">${getCatIcon(c)} ${c} <span onclick="delCat('${c}')" style="color:var(--danger); cursor:pointer; margin-left:5px;">×</span></span>`;
-                });
-            }
-        }
-
-        function selectCategory(c) {
-            document.getElementById('selectedCategory').value = c;
-            renderCategoryUI(); 
-        }
-
-        function getCatIcon(c) {
-            const map = { 'Food':'🍔','Transport':'🚕','Shopping':'🛍️','Entertainment':'🎬','Bills':'⚡','Education':'📚','Salary':'💰','Health':'💊'};
-            return map[c] || '⚪';
         }
 
         function renderChart(txList) {
             const ctx = document.getElementById('expenseChart').getContext('2d');
             const cats = {};
-            // Use the filtered list passed to function, or fallback to full list
             const sourceData = txList || data.transactions;
-            
             sourceData.forEach(t => { if(t.type === 'expense') cats[t.category] = (cats[t.category]||0) + t.amount; });
-            
             if(chartInstance) chartInstance.destroy();
             const colors = ['#6366f1', '#ec4899', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
-            
             chartInstance = new Chart(ctx, {
-                type: 'doughnut',
-                data: { labels: Object.keys(cats), datasets: [{ data: Object.values(cats), backgroundColor: colors, borderWidth: 0 }] },
-                options: { 
-                    responsive: true, maintainAspectRatio: false, cutout: '75%',
-                    plugins: { legend: { position: 'right', labels: { color: getComputedStyle(document.body).getPropertyValue('--text-muted'), font: {family: 'Poppins'} } } } 
-                }
+                type: 'doughnut', data: { labels: Object.keys(cats), datasets: [{ data: Object.values(cats), backgroundColor: colors, borderWidth: 0 }] },
+                options: { responsive: true, maintainAspectRatio: false, cutout: '75%', plugins: { legend: { position: 'right', labels: { color: getComputedStyle(document.body).getPropertyValue('--text-muted'), font: {family: 'Poppins'} } } } }
             });
         }
 
@@ -561,20 +501,43 @@
             const list = document.getElementById('walletList'); list.innerHTML = "";
             const select = document.getElementById('account');
             const from = document.getElementById('fromAccount'); const to = document.getElementById('toAccount');
-            select.innerHTML = ""; from.innerHTML = "<option disabled selected>From</option>"; to.innerHTML = "<option disabled selected>To</option>";
+            const recurAcc = document.getElementById('recurAcc');
+            select.innerHTML = ""; from.innerHTML = "<option disabled selected>From</option>"; to.innerHTML = "<option disabled selected>To</option>"; recurAcc.innerHTML = "";
 
-            for(const [k,v] of Object.entries(data.accounts)) {
+            data.accountOrder.forEach((k, index) => {
+                if(!data.accounts.hasOwnProperty(k)) return; 
+                const v = data.accounts[k];
                 list.innerHTML += `
                     <div class="list-item">
-                        <div style="display:flex;align-items:center;"><div class="icon-box">💳</div><div><div style="font-weight:600;">${k}</div><div style="font-size:0.85rem;color:var(--text-muted);">₹${v.toFixed(2)}</div></div></div>
+                        <div style="display:flex;align-items:center;">
+                            <div style="display:flex;flex-direction:column;margin-right:10px;">
+                                <button onclick="moveWallet('${k}', 'up')" style="border:none;background:none;font-size:0.8rem;cursor:pointer;color:var(--text-muted);">▲</button>
+                                <button onclick="moveWallet('${k}', 'down')" style="border:none;background:none;font-size:0.8rem;cursor:pointer;color:var(--text-muted);">▼</button>
+                            </div>
+                            <div class="icon-box">💳</div>
+                            <div><div style="font-weight:600;">${k}</div><div style="font-size:0.85rem;color:var(--text-muted);">₹${v.toFixed(2)}</div></div>
+                        </div>
                         <div><button class="btn-icon-only" style="display:inline-flex;" onclick="renameAcc('${k}')">✎</button><button class="btn-icon-only" style="display:inline-flex;color:var(--danger);" onclick="delAcc('${k}')">✕</button></div>
                     </div>`;
-                [select, from, to].forEach(el => el.innerHTML += `<option value="${k}">${k}</option>`);
-            }
+                [select, from, to, recurAcc].forEach(el => el.innerHTML += `<option value="${k}">${k}</option>`);
+            });
+        }
+        
+        function moveWallet(name, dir) {
+            const idx = data.accountOrder.indexOf(name);
+            if(dir==='up' && idx>0) { [data.accountOrder[idx], data.accountOrder[idx-1]] = [data.accountOrder[idx-1], data.accountOrder[idx]]; }
+            else if(dir==='down' && idx<data.accountOrder.length-1) { [data.accountOrder[idx], data.accountOrder[idx+1]] = [data.accountOrder[idx+1], data.accountOrder[idx]]; }
+            saveData();
         }
 
         function renderPlanning() {
-            // Budgets
+            // Recurring
+            const rList = document.getElementById('recurList'); rList.innerHTML="";
+            if(data.recurring.length===0) rList.innerHTML = "<p style='text-align:center;color:var(--text-muted);'>No auto-rules.</p>";
+            data.recurring.forEach((r, i) => {
+                rList.innerHTML += `<div class="list-item"><div><strong>${r.desc}</strong><div style="font-size:0.8rem;color:var(--text-muted);">Day ${r.day} • ₹${r.amount} (${r.type})</div></div><button class="btn-icon-only" style="color:var(--danger);width:30px;height:30px;" onclick="delRecur(${i})">✕</button></div>`;
+            });
+            // Budgets (Same)
             const bList = document.getElementById('budgetList'); bList.innerHTML = "";
             const spent = {};
             data.transactions.forEach(t => { if(t.type==='expense') spent[t.category] = (spent[t.category]||0) + t.amount; });
@@ -583,20 +546,27 @@
                 const used = spent[cat] || 0; const pct = Math.min((used/limit)*100, 100); const isOver = used > limit;
                 bList.innerHTML += `<div style="margin-bottom:15px;"><div class="flex-between" style="font-size:0.9rem;margin-bottom:5px;"><strong>${cat}</strong><span style="color:${isOver?'var(--danger)':'var(--text-muted)'}">₹${used} / ₹${limit}</span></div><div class="progress-track"><div class="progress-fill ${isOver?'red':''}" style="width:${pct}%"></div></div></div>`;
             }
-            // Goals
+            // Goals & Bills (Same)
             const gList = document.getElementById('goalList'); gList.innerHTML = "";
             if(data.goals.length===0) gList.innerHTML = "<p style='text-align:center;color:var(--text-muted);'>No goals.</p>";
-            data.goals.forEach(g => {
-                const pct = Math.min((g.saved/g.target)*100, 100);
-                gList.innerHTML += `<div style="background:var(--input-bg);padding:15px;border-radius:20px;margin-bottom:10px;"><div class="flex-between"><strong>${g.name}</strong><span style="font-size:0.85rem;color:var(--success);">₹${g.saved} / ₹${g.target}</span></div><div class="progress-track" style="margin-bottom:10px;"><div class="progress-fill" style="width:${pct}%"></div></div><div class="flex-between"><button class="btn-ghost" style="color:var(--primary);padding:0;" onclick="addFunds(${g.id})">+ Add</button><button class="btn-ghost" style="color:var(--danger);padding:0;" onclick="delGoal(${g.id})">Del</button></div></div>`;
-            });
-            // Bills
+            data.goals.forEach(g => { const pct = Math.min((g.saved/g.target)*100, 100); gList.innerHTML += `<div style="background:var(--input-bg);padding:15px;border-radius:20px;margin-bottom:10px;"><div class="flex-between"><strong>${g.name}</strong><span style="font-size:0.85rem;color:var(--success);">₹${g.saved} / ₹${g.target}</span></div><div class="progress-track" style="margin-bottom:10px;"><div class="progress-fill" style="width:${pct}%"></div></div><div class="flex-between"><button class="btn-ghost" style="color:var(--primary);padding:0;" onclick="addFunds(${g.id})">+ Add</button><button class="btn-ghost" style="color:var(--danger);padding:0;" onclick="delGoal(${g.id})">Del</button></div></div>`; });
             const billList = document.getElementById('billList'); billList.innerHTML = "";
             if(data.bills.length===0) billList.innerHTML = "<p style='text-align:center;color:var(--text-muted);'>No bills.</p>";
-            data.bills.forEach(b => {
-                billList.innerHTML += `<div class="list-item"><div><div style="font-weight:600;">${b.name}</div><div style="color:var(--text-muted);font-size:0.85rem;">₹${b.amount}</div></div><div><button class="btn-primary" style="padding:8px 16px;width:auto;display:inline-block;font-size:0.8rem;" onclick="payBill('${b.name}', ${b.amount})">Pay</button><button class="btn-icon-only" style="display:inline-flex;margin-left:5px;width:30px;height:30px;color:var(--danger);" onclick="delBill(${b.id})">✕</button></div></div>`;
-            });
+            data.bills.forEach(b => { billList.innerHTML += `<div class="list-item"><div><div style="font-weight:600;">${b.name}</div><div style="color:var(--text-muted);font-size:0.85rem;">₹${b.amount}</div></div><div><button class="btn-primary" style="padding:8px 16px;width:auto;display:inline-block;font-size:0.8rem;" onclick="payBill('${b.name}', ${b.amount})">Pay</button><button class="btn-icon-only" style="display:inline-flex;margin-left:5px;width:30px;height:30px;color:var(--danger);" onclick="delBill(${b.id})">✕</button></div></div>`; });
         }
+
+        function renderCategoryUI() {
+            const grid = document.getElementById('categoryGrid'); grid.innerHTML = '';
+            const currentSel = document.getElementById('selectedCategory').value;
+            data.categories.forEach(c => {
+                grid.innerHTML += `<div class="cat-item ${currentSel===c?'selected':''}" onclick="selectCategory('${c}')"><div class="cat-icon-circle">${getCatIcon(c)}</div><span class="cat-label">${c}</span></div>`;
+            });
+            const bSel = document.getElementById('budgetCat'); if(bSel) { bSel.innerHTML = ''; data.categories.forEach(c => bSel.innerHTML += `<option value="${c}">${c}</option>`); }
+            const mList = document.getElementById('manageCatList'); if(mList) { mList.innerHTML = ''; data.categories.forEach(c => mList.innerHTML += `<span style="background:var(--input-bg); padding:6px 12px; border-radius:12px; font-size:0.85rem;">${getCatIcon(c)} ${c} <span onclick="delCat('${c}')" style="color:var(--danger); cursor:pointer; margin-left:5px;">×</span></span>`); }
+        }
+
+        function selectCategory(c) { document.getElementById('selectedCategory').value = c; renderCategoryUI(); }
+        function getCatIcon(c) { const map = { 'Food':'🍔','Transport':'🚕','Shopping':'🛍️','Entertainment':'🎬','Bills':'⚡','Education':'📚','Salary':'💰','Health':'💊'}; return map[c] || '⚪'; }
 
         // --- ACTIONS ---
         function setMode(m) { addMode = m; document.getElementById('mode-trans').className = m==='trans'?'mode-btn active':'mode-btn'; document.getElementById('mode-transfer').className = m==='transfer'?'mode-btn active':'mode-btn'; document.getElementById('field-trans').style.display = m==='trans'?'block':'none'; document.getElementById('field-transfer').style.display = m==='transfer'?'block':'none'; }
@@ -606,7 +576,6 @@
             const amt = parseFloat(document.getElementById('amount').value);
             if(!amt) { showToast("Enter amount", "error"); return; }
             const id = Date.now();
-
             if(addMode === 'trans') {
                 const desc = document.getElementById('desc').value || 'Expense';
                 const cat = document.getElementById('selectedCategory').value;
@@ -620,30 +589,33 @@
                 data.accounts[from] -= amt; data.accounts[to] += amt;
                 data.transactions.unshift({ id, desc: `To ${to}`, amount: amt, type: 'transfer', category: 'Transfer', account: from });
             }
-            saveData(); showToast("Saved!");
-            document.getElementById('amount').value=""; document.getElementById('desc').value="";
-            switchTab('home');
+            saveData(); showToast("Saved!"); document.getElementById('amount').value=""; document.getElementById('desc').value=""; switchTab('home');
         }
 
         function delTrans(id) {
-            if(confirm("Delete transaction?")) {
+            if(confirm("Delete?")) {
                 const t = data.transactions.find(x => x.id === id);
-                if(t.type === 'income') data.accounts[t.account] -= t.amount;
-                else if(t.type === 'expense') data.accounts[t.account] += t.amount;
-                else if(t.type === 'transfer') data.accounts[t.account] += t.amount; 
+                if(t.type === 'income') data.accounts[t.account] -= t.amount; else if(t.type === 'expense') data.accounts[t.account] += t.amount; else if(t.type === 'transfer') data.accounts[t.account] += t.amount;
                 data.transactions = data.transactions.filter(x => x.id !== id);
                 saveData(); showToast("Deleted");
             }
         }
 
         // --- MANAGE ---
-        function addWallet() { const n=document.getElementById('newWallet').value; if(n && !data.accounts[n]) { data.accounts[n]=0; saveData(); document.getElementById('newWallet').value=""; } }
-        function delAcc(n) { if(confirm("Delete wallet?")) { delete data.accounts[n]; saveData(); } }
-        function renameAcc(o) { const n=prompt("Rename:",o); if(n&&n!==o&&!data.accounts[n]) { data.accounts[n]=data.accounts[o]; delete data.accounts[o]; data.transactions.forEach(t=>{if(t.account===o)t.account=n}); saveData(); } }
+        function addWallet() { const n=document.getElementById('newWallet').value; if(n && !data.accounts[n]) { data.accounts[n]=0; data.accountOrder.push(n); saveData(); document.getElementById('newWallet').value=""; } }
+        function delAcc(n) { if(confirm("Delete?")) { delete data.accounts[n]; data.accountOrder = data.accountOrder.filter(x=>x!==n); saveData(); } }
+        function renameAcc(o) { const n=prompt("Rename:",o); if(n&&n!==o&&!data.accounts[n]) { data.accounts[n]=data.accounts[o]; delete data.accounts[o]; data.accountOrder[data.accountOrder.indexOf(o)] = n; data.transactions.forEach(t=>{if(t.account===o)t.account=n}); data.recurring.forEach(r=>{if(r.account===o)r.account=n}); saveData(); } }
         function addCategory() { const n=document.getElementById('newCatInput').value; if(n&&!data.categories.includes(n)) { data.categories.push(n); document.getElementById('newCatInput').value=""; saveData(); } }
-        function delCat(c) { if(confirm("Delete category?")) { data.categories=data.categories.filter(x=>x!==c); saveData(); } }
+        function delCat(c) { if(confirm("Delete?")) { data.categories=data.categories.filter(x=>x!==c); saveData(); } }
         
-        // Planning Actions
+        // Planning
+        function showRecurForm() { document.getElementById('recurForm').style.display='block'; }
+        function addRecur() { 
+            const d=document.getElementById('recurDesc').value; const a=parseFloat(document.getElementById('recurAmount').value); const day=parseInt(document.getElementById('recurDay').value); const t=document.getElementById('recurType').value; const acc=document.getElementById('recurAcc').value;
+            if(d && a && day>=1 && day<=31) { data.recurring.push({id:Date.now(), desc:d, amount:a, day, type:t, account:acc, lastRun:0}); saveData(); document.getElementById('recurForm').style.display='none'; }
+        }
+        function delRecur(i) { data.recurring.splice(i,1); saveData(); }
+
         function showBudgetForm() { document.getElementById('budgetForm').style.display='block'; }
         function saveBudget() { const c=document.getElementById('budgetCat').value; const l=parseFloat(document.getElementById('budgetLimit').value); if(l){ data.budgets[c]=l; saveData(); document.getElementById('budgetForm').style.display='none'; } }
         function showGoalForm() { document.getElementById('goalForm').style.display='block'; }
@@ -653,33 +625,45 @@
         function showBillForm() { document.getElementById('billForm').style.display='block'; }
         function addBill() { const n=document.getElementById('billName').value; const a=parseFloat(document.getElementById('billAmount').value); if(n&&a){ data.bills.push({id:Date.now(),name:n,amount:a}); saveData(); document.getElementById('billForm').style.display='none'; } }
         function delBill(id) { data.bills=data.bills.filter(b=>b.id!==id); saveData(); }
-        function payBill(n,a) { if(confirm("Pay "+n+"?")) { const acc=Object.keys(data.accounts)[0]; data.accounts[acc]-=a; data.transactions.unshift({id:Date.now(),desc:"Paid: "+n,amount:a,type:'expense',category:'Bills',account:acc}); saveData(); showToast("Bill Paid"); } }
+        function payBill(n,a) { if(confirm("Pay "+n+"?")) { const acc=Object.keys(data.accounts)[0]; data.accounts[acc]-=a; data.transactions.unshift({id:Date.now(),desc:"Paid: "+n,amount:a,type:'expense',category:'Bills',account:acc}); saveData(); showToast("Paid"); } }
 
         // --- UTILS ---
-        function switchTab(t) {
-            document.querySelectorAll('.view').forEach(e => e.style.display='none');
-            document.querySelectorAll('.tab-btn').forEach(e => e.classList.remove('active'));
-            document.getElementById(`tab-${t}`).style.display='block';
-            if(t!=='add') document.getElementById(`btn-${t}`).classList.add('active');
-            renderAll();
-        }
-        function toggleTheme() {
-            const c = document.documentElement.getAttribute('data-theme');
-            const n = c==='dark'?'light':'dark';
-            document.documentElement.setAttribute('data-theme', n);
-            localStorage.setItem('kasu_theme', n);
-            renderChart();
-        }
-        function exportCSV() {
-            let csv = "Date,Description,Category,Type,Amount,Account\n";
-            data.transactions.forEach(t => {
-                const d = new Date(t.id).toLocaleDateString();
-                csv += `${d},${t.desc},${t.category},${t.type},${t.amount},${t.account}\n`;
-            });
-            const b = new Blob([csv], {type:'text/csv'}); const a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download='kasu_data.csv'; a.click();
-        }
+        function switchTab(t) { document.querySelectorAll('.view').forEach(e => e.style.display='none'); document.querySelectorAll('.tab-btn').forEach(e => e.classList.remove('active')); document.getElementById(`tab-${t}`).style.display='block'; if(t!=='add') document.getElementById(`btn-${t}`).classList.add('active'); renderAll(); }
+        function toggleTheme() { const c = document.documentElement.getAttribute('data-theme'); const n = c==='dark'?'light':'dark'; document.documentElement.setAttribute('data-theme', n); localStorage.setItem('kasu_theme', n); renderChart(); }
+        
+        // --- FIXED IMPORT LOGIC ---
+        function exportCSV() { let csv = "Date,Desc,Cat,Type,Amt,Acc\n"; data.transactions.forEach(t => { csv += `${new Date(t.id).toLocaleDateString()},${t.desc},${t.category},${t.type},${t.amount},${t.account}\n`; }); const b = new Blob([csv], {type:'text/csv'}); const a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download='kasu.csv'; a.click(); }
         function exportData() { const b=new Blob([JSON.stringify(data)], {type:'application/json'}); const a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download='kasu_backup.json'; a.click(); }
-        function importData(i) { const r=new FileReader(); r.onload=e=>{ data=JSON.parse(e.target.result); saveData(); showToast("Restored!"); }; r.readAsText(i.files[0]); }
+        
+        function importData(input) {
+            const file = input.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const imported = JSON.parse(e.target.result);
+                    // Safe Merge to prevent crashes
+                    data = {
+                        accounts: imported.accounts || {},
+                        accountOrder: imported.accountOrder || Object.keys(imported.accounts || {}),
+                        transactions: imported.transactions || [],
+                        budgets: imported.budgets || {},
+                        goals: imported.goals || [],
+                        bills: imported.bills || [],
+                        categories: imported.categories || ["Food", "Transport", "Shopping", "Entertainment", "Bills", "Health", "Education", "Salary"],
+                        recurring: imported.recurring || []
+                    };
+                    saveData();
+                    showToast("Restored Successfully!", "success");
+                } catch (err) {
+                    showToast("Error reading file", "error");
+                    console.error(err);
+                }
+            };
+            reader.readAsText(file);
+            input.value = ''; // Reset
+        }
+
         function resetApp() { if(confirm("Reset everything?")) { localStorage.clear(); location.reload(); } }
 
         if(!storedPin) { document.getElementById('app-wrapper').style.display='none'; }
