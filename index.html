@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>KASU V7 (Fixed)</title>
+    <title>KASU V9 (Recurring)</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
@@ -40,6 +40,7 @@
 
         /* --- UTILS --- */
         .flex-between { display: flex; justify-content: space-between; align-items: center; }
+        .flex-center { display: flex; justify-content: center; align-items: center; }
         h2 { font-size: 1.2rem; font-weight: 600; margin-bottom: 15px; }
         
         /* --- TOAST --- */
@@ -205,25 +206,34 @@
             <div id="tab-plan" class="view" style="display:none;">
                 
                 <div class="card" style="border-left: 4px solid var(--primary);">
-                    <div class="flex-between"><h2>Auto-Pay / Recurring</h2><button class="btn-ghost" onclick="showRecurForm()">+ Rule</button></div>
-                    <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:10px;">Transactions add automatically on the set day.</p>
+                    <div class="flex-between"><h2>Recurring</h2><button class="btn-ghost" onclick="showRecurForm()">+ Rule</button></div>
+                    <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:10px;">Set repeating transactions.</p>
                     <div id="recurList"></div>
-                    <button class="btn btn-ghost" onclick="processRecurring(true)" style="margin-top:10px; font-size:0.8rem;">↻ Run Check Now</button>
+                    <button class="btn btn-ghost" onclick="processRecurring(true)" style="margin-top:10px; font-size:0.8rem;">↻ Check Now</button>
                     
                     <div id="recurForm" style="display:none; margin-top:15px; border-top:1px solid var(--border); padding-top:15px;">
-                        <input type="text" id="recurDesc" placeholder="Name (e.g. Salary, Rent)">
+                        <input type="text" id="recurDesc" placeholder="Name (e.g. Rent, Netflix)">
                         <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
                             <input type="number" id="recurAmount" placeholder="Amount">
-                            <input type="number" id="recurDay" placeholder="Day (1-31)" min="1" max="31">
+                            <select id="recurFreq">
+                                <option value="monthly">Every Month</option>
+                                <option value="weekly">Every Week</option>
+                                <option value="yearly">Every Year</option>
+                                <option value="daily">Every Day</option>
+                            </select>
                         </div>
+                        
+                        <label style="font-size:0.8rem; color:var(--text-muted); margin-bottom:5px; display:block;">Starts From:</label>
+                        <input type="date" id="recurStartDate">
+
                         <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
                             <select id="recurType">
                                 <option value="expense">Expense (-)</option>
                                 <option value="income">Income (+)</option>
                             </select>
-                            <select id="recurAcc"></select>
+                            <select id="recurAcc"><option disabled selected>Select Wallet</option></select>
                         </div>
-                        <button class="btn btn-primary" onclick="addRecur()">Set Rule</button>
+                        <button class="btn btn-primary" onclick="addRecur()">Set Recurring Rule</button>
                     </div>
                 </div>
 
@@ -278,7 +288,7 @@
                             <input type="hidden" id="selectedCategory" value="Food">
                             <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-top:15px;">
                                 <select id="type" style="margin:0;"><option value="expense">Expense</option><option value="income">Income</option></select>
-                                <select id="account" style="margin:0;" required><option disabled>Select Wallet</option></select>
+                                <select id="account" style="margin:0;" required><option disabled selected>Select Wallet</option></select>
                             </div>
                         </div>
 
@@ -375,7 +385,6 @@
             if(saved) {
                 const parsed = JSON.parse(saved);
                 data = { ...data, ...parsed };
-                // Fix missing fields for old backups
                 if(!data.accountOrder || data.accountOrder.length === 0) data.accountOrder = Object.keys(data.accounts);
                 if(!data.recurring) data.recurring = [];
             }
@@ -386,9 +395,7 @@
         function renderAll() { 
             // Fix accountOrder mismatch before rendering
             const currentKeys = Object.keys(data.accounts);
-            // Add missing
             currentKeys.forEach(k => { if(!data.accountOrder.includes(k)) data.accountOrder.push(k); });
-            // Remove deleted
             data.accountOrder = data.accountOrder.filter(k => currentKeys.includes(k));
 
             renderHome(); renderWallets(); renderPlanning(); renderCategoryUI(); 
@@ -408,14 +415,16 @@
         // --- RECURRING LOGIC ---
         function processRecurring(manual = false) {
             const now = new Date();
+            const todayStr = now.toISOString().split('T')[0]; // YYYY-MM-DD
             let changed = false;
+            let count = 0;
+
             data.recurring.forEach(r => {
-                const last = new Date(r.lastRun || 0);
-                // Check if already run this month (and year)
-                const alreadyRunThisMonth = last.getMonth() === now.getMonth() && last.getFullYear() === now.getFullYear();
-                
-                // If not run this month AND current day >= schedule day
-                if(!alreadyRunThisMonth && now.getDate() >= r.day) {
+                let nextRun = new Date(r.nextRun);
+                // Check if Today >= Next Scheduled Run
+                // We use date strings to compare to avoid time issues
+                if (todayStr >= r.nextRun) {
+                    // Execute Transaction
                     data.transactions.unshift({
                         id: Date.now() + Math.random(), 
                         desc: "Auto: " + r.desc,
@@ -424,17 +433,28 @@
                         category: "Bills",
                         account: r.account
                     });
+                    
                     if(r.type==='expense') data.accounts[r.account]-=r.amount; else data.accounts[r.account]+=r.amount;
-                    r.lastRun = now.getTime();
+                    
+                    // Calculate NEW nextRun
+                    let nextDate = new Date(r.nextRun);
+                    if(r.freq === 'daily') nextDate.setDate(nextDate.getDate() + 1);
+                    if(r.freq === 'weekly') nextDate.setDate(nextDate.getDate() + 7);
+                    if(r.freq === 'monthly') nextDate.setMonth(nextDate.getMonth() + 1);
+                    if(r.freq === 'yearly') nextDate.setFullYear(nextDate.getFullYear() + 1);
+                    
+                    r.nextRun = nextDate.toISOString().split('T')[0];
                     changed = true;
-                    showToast("Processed: " + r.desc, "info");
-                } else if (manual && !alreadyRunThisMonth) {
-                   showToast(`Waiting for Day ${r.day}`, "info"); 
-                } else if (manual && alreadyRunThisMonth) {
-                   showToast(`${r.desc} already done this month.`, "success");
+                    count++;
                 }
             });
-            if(changed) saveData();
+
+            if(changed) {
+                saveData();
+                showToast(`Processed ${count} recurring items`, "info");
+            } else if (manual) {
+                showToast("Nothing due today", "success");
+            }
         }
 
         // --- FILTER ---
@@ -515,24 +535,14 @@
 
         function renderWallets() {
             const list = document.getElementById('walletList'); list.innerHTML = "";
-            
-            // Get Select Elements by ID
-            const selects = [
-                document.getElementById('account'),
-                document.getElementById('fromAccount'),
-                document.getElementById('toAccount'),
-                document.getElementById('recurAcc')
-            ];
-
-            // Reset Select Options
+            const selects = [document.getElementById('account'), document.getElementById('fromAccount'), document.getElementById('toAccount'), document.getElementById('recurAcc')];
+            // Reset Dropdowns
             selects.forEach(s => { if(s) s.innerHTML = "<option disabled selected>Select Wallet</option>"; });
 
-            // Iterate over ordered accounts
+            // Populate based on Order
             data.accountOrder.forEach(k => {
-                if(!data.accounts.hasOwnProperty(k)) return;
+                if(!data.accounts.hasOwnProperty(k)) return; 
                 const v = data.accounts[k];
-                
-                // 1. Add to List
                 list.innerHTML += `
                     <div class="list-item">
                         <div style="display:flex;align-items:center;">
@@ -545,16 +555,7 @@
                         </div>
                         <div><button class="btn-icon-only" style="display:inline-flex;" onclick="renameAcc('${k}')">✎</button><button class="btn-icon-only" style="display:inline-flex;color:var(--danger);" onclick="delAcc('${k}')">✕</button></div>
                     </div>`;
-
-                // 2. Add to ALL Dropdowns
-                selects.forEach(s => {
-                    if(s) {
-                        const opt = document.createElement('option');
-                        opt.value = k; 
-                        opt.innerText = k;
-                        s.appendChild(opt);
-                    }
-                });
+                selects.forEach(s => { if(s) s.innerHTML += `<option value="${k}">${k}</option>`; });
             });
         }
         
@@ -568,23 +569,17 @@
         function renderPlanning() {
             // Recurring
             const rList = document.getElementById('recurList'); rList.innerHTML="";
-            if(data.recurring.length===0) rList.innerHTML = "<p style='text-align:center;color:var(--text-muted);'>No auto-rules.</p>";
+            if(data.recurring.length===0) rList.innerHTML = "<p style='text-align:center;color:var(--text-muted);'>No active rules.</p>";
             data.recurring.forEach((r, i) => {
-                const now = new Date();
-                let nextDate = new Date();
-                if (now.getDate() > r.day) {
-                    // Next month
-                    nextDate.setMonth(now.getMonth() + 1);
-                }
-                nextDate.setDate(r.day);
-                const dueText = `Next Due: ${nextDate.toLocaleDateString('en-US', {month:'short', day:'numeric'})}`;
-
+                const nextDate = new Date(r.nextRun);
+                const dateStr = nextDate.toLocaleDateString('en-US', {month:'short', day:'numeric'});
+                const freqMap = {daily:'Daily', weekly:'Weekly', monthly:'Monthly', yearly:'Yearly'};
                 rList.innerHTML += `
                     <div class="list-item">
                         <div>
                             <strong>${r.desc}</strong>
-                            <div style="font-size:0.8rem;color:var(--text-muted);">Day ${r.day} • ₹${r.amount} (${r.type})</div>
-                            <div style="font-size:0.75rem;color:var(--primary);font-weight:600;">${dueText}</div>
+                            <div style="font-size:0.8rem;color:var(--text-muted);">${freqMap[r.freq]} • ₹${r.amount}</div>
+                            <div style="font-size:0.75rem;color:var(--primary);font-weight:600;">Next: ${dateStr}</div>
                         </div>
                         <button class="btn-icon-only" style="color:var(--danger);width:30px;height:30px;" onclick="delRecur(${i})">✕</button>
                     </div>`;
@@ -598,7 +593,7 @@
                 const used = spent[cat] || 0; const pct = Math.min((used/limit)*100, 100); const isOver = used > limit;
                 bList.innerHTML += `<div style="margin-bottom:15px;"><div class="flex-between" style="font-size:0.9rem;margin-bottom:5px;"><strong>${cat}</strong><span style="color:${isOver?'var(--danger)':'var(--text-muted)'}">₹${used} / ₹${limit}</span></div><div class="progress-track"><div class="progress-fill ${isOver?'red':''}" style="width:${pct}%"></div></div></div>`;
             }
-            // Goals & Bills
+            // Goals & Bills (Same)
             const gList = document.getElementById('goalList'); gList.innerHTML = "";
             if(data.goals.length===0) gList.innerHTML = "<p style='text-align:center;color:var(--text-muted);'>No goals.</p>";
             data.goals.forEach(g => { const pct = Math.min((g.saved/g.target)*100, 100); gList.innerHTML += `<div style="background:var(--input-bg);padding:15px;border-radius:20px;margin-bottom:10px;"><div class="flex-between"><strong>${g.name}</strong><span style="font-size:0.85rem;color:var(--success);">₹${g.saved} / ₹${g.target}</span></div><div class="progress-track" style="margin-bottom:10px;"><div class="progress-fill" style="width:${pct}%"></div></div><div class="flex-between"><button class="btn-ghost" style="color:var(--primary);padding:0;" onclick="addFunds(${g.id})">+ Add</button><button class="btn-ghost" style="color:var(--danger);padding:0;" onclick="delGoal(${g.id})">Del</button></div></div>`; });
@@ -665,9 +660,14 @@
         // Planning
         function showRecurForm() { document.getElementById('recurForm').style.display='block'; }
         function addRecur() { 
-            const d=document.getElementById('recurDesc').value; const a=parseFloat(document.getElementById('recurAmount').value); const day=parseInt(document.getElementById('recurDay').value); const t=document.getElementById('recurType').value; const acc=document.getElementById('recurAcc').value;
-            if(d && a && day>=1 && day<=31 && acc && acc !== "Select Wallet") { 
-                data.recurring.push({id:Date.now(), desc:d, amount:a, day, type:t, account:acc, lastRun:0}); 
+            const d=document.getElementById('recurDesc').value; const a=parseFloat(document.getElementById('recurAmount').value); 
+            const freq=document.getElementById('recurFreq').value; 
+            const start=document.getElementById('recurStartDate').value;
+            const t=document.getElementById('recurType').value; const acc=document.getElementById('recurAcc').value;
+            
+            if(d && a && start && acc && acc !== "Select Wallet") { 
+                // Store nextRun based on user selected start date
+                data.recurring.push({id:Date.now(), desc:d, amount:a, freq: freq, nextRun: start, type:t, account:acc}); 
                 saveData(); document.getElementById('recurForm').style.display='none'; 
             } else {
                 showToast("Check input", "error");
