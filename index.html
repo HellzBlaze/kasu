@@ -3,12 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>KASU V9 (Recurring)</title>
+    <title>KASU V11</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root {
-            /* Palette */
             --primary: #6366f1;
             --primary-grad: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
             --bg: #f8fafc;
@@ -215,16 +214,21 @@
                         <input type="text" id="recurDesc" placeholder="Name (e.g. Rent, Netflix)">
                         <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
                             <input type="number" id="recurAmount" placeholder="Amount">
-                            <select id="recurFreq">
-                                <option value="monthly">Every Month</option>
-                                <option value="weekly">Every Week</option>
-                                <option value="yearly">Every Year</option>
-                                <option value="daily">Every Day</option>
+                            <select id="recurFreq" onchange="toggleRecurMode()">
+                                <option value="monthly">Monthly</option>
+                                <option value="weekly">Weekly</option>
+                                <option value="yearly">Yearly</option>
+                                <option value="date">Specific Date</option>
                             </select>
                         </div>
                         
-                        <label style="font-size:0.8rem; color:var(--text-muted); margin-bottom:5px; display:block;">Starts From:</label>
-                        <input type="date" id="recurStartDate">
+                        <div id="recurDayInput">
+                            <input type="number" id="recurDay" placeholder="Day of Month (1-31)" min="1" max="31">
+                        </div>
+                        <div id="recurDateBox" style="display:none;">
+                            <label style="font-size:0.8rem; color:var(--text-muted);">Start / Specific Date:</label>
+                            <input type="date" id="recurDateInput">
+                        </div>
 
                         <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
                             <select id="recurType">
@@ -233,7 +237,7 @@
                             </select>
                             <select id="recurAcc"><option disabled selected>Select Wallet</option></select>
                         </div>
-                        <button class="btn btn-primary" onclick="addRecur()">Set Recurring Rule</button>
+                        <button class="btn btn-primary" onclick="addRecur()">Set Rule</button>
                     </div>
                 </div>
 
@@ -320,7 +324,8 @@
                     <h2>Custom Categories</h2>
                     <div style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:15px;" id="manageCatList"></div>
                     <div style="display:flex; gap:10px;">
-                        <input type="text" id="newCatInput" placeholder="New Category" style="margin:0;">
+                        <input type="text" id="newCatIcon" placeholder="😀" style="margin:0; width:60px; text-align:center;" maxlength="2">
+                        <input type="text" id="newCatInput" placeholder="Name (e.g. Gym)" style="margin:0; flex:1;">
                         <button class="btn btn-primary" style="width:auto;" onclick="addCategory()">Add</button>
                     </div>
                 </div>
@@ -330,7 +335,7 @@
                     <button class="btn" style="background:var(--input-bg); color:var(--text); margin-bottom:10px;" onclick="exportCSV()">📊 Export CSV</button>
                     <button class="btn" style="background:var(--input-bg); color:var(--text); margin-bottom:10px;" onclick="exportData()">⬇ Backup JSON</button>
                     <button class="btn" style="background:var(--input-bg); color:var(--text); margin-bottom:10px;" onclick="document.getElementById('fileInput').click()">⬆ Restore JSON</button>
-                    <input type="file" id="fileInput" style="display:none;" onchange="importData(this)">
+                    <input type="file" id="fileInput" style="display:none;" onchange="importData(this)" accept=".json">
                     <button class="btn" style="background:rgba(239, 68, 68, 0.1); color:var(--danger);" onclick="resetApp()">Reset App</button>
                 </div>
             </div>
@@ -350,7 +355,10 @@
             accounts: { "Cash": 0, "Bank": 0 }, 
             accountOrder: ["Cash", "Bank"], 
             transactions: [], budgets: {}, goals: [], bills: [],
-            categories: ["Food", "Transport", "Shopping", "Entertainment", "Bills", "Health", "Education", "Salary"],
+            // Added Groceries by default
+            categories: ["Food", "Groceries", "Transport", "Shopping", "Entertainment", "Bills", "Health", "Education", "Salary"],
+            // Added Emoji Mapping
+            categoryIcons: { "Groceries": "🛒" },
             recurring: [] 
         };
         let currentPin = "";
@@ -387,17 +395,17 @@
                 data = { ...data, ...parsed };
                 if(!data.accountOrder || data.accountOrder.length === 0) data.accountOrder = Object.keys(data.accounts);
                 if(!data.recurring) data.recurring = [];
+                // Init icons map if missing
+                if(!data.categoryIcons) data.categoryIcons = { "Groceries": "🛒" };
             }
             if(localStorage.getItem('kasu_theme') === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
             renderAll();
         }
         function saveData() { localStorage.setItem('kasu_data', JSON.stringify(data)); renderAll(); }
         function renderAll() { 
-            // Fix accountOrder mismatch before rendering
             const currentKeys = Object.keys(data.accounts);
             currentKeys.forEach(k => { if(!data.accountOrder.includes(k)) data.accountOrder.push(k); });
             data.accountOrder = data.accountOrder.filter(k => currentKeys.includes(k));
-
             renderHome(); renderWallets(); renderPlanning(); renderCategoryUI(); 
         }
         function showToast(msg, type='success') {
@@ -413,18 +421,48 @@
         }
 
         // --- RECURRING LOGIC ---
+        function toggleRecurMode() {
+            const freq = document.getElementById('recurFreq').value;
+            const dayInput = document.getElementById('recurDayInput');
+            const dateInput = document.getElementById('recurDateBox');
+            if (freq === 'monthly') {
+                dayInput.style.display = 'block';
+                dateInput.style.display = 'none';
+            } else {
+                dayInput.style.display = 'none';
+                dateInput.style.display = 'block';
+            }
+        }
+
         function processRecurring(manual = false) {
             const now = new Date();
-            const todayStr = now.toISOString().split('T')[0]; // YYYY-MM-DD
+            const todayStr = now.toISOString().split('T')[0]; 
             let changed = false;
             let count = 0;
 
-            data.recurring.forEach(r => {
-                let nextRun = new Date(r.nextRun);
-                // Check if Today >= Next Scheduled Run
-                // We use date strings to compare to avoid time issues
-                if (todayStr >= r.nextRun) {
-                    // Execute Transaction
+            for (let i = data.recurring.length - 1; i >= 0; i--) {
+                const r = data.recurring[i];
+                let shouldRun = false;
+
+                if (r.freq === 'date') {
+                    if (todayStr >= r.nextRun) {
+                        shouldRun = true;
+                        data.recurring.splice(i, 1); 
+                    }
+                } else {
+                    let nextRunDate = new Date(r.nextRun);
+                    if (todayStr >= r.nextRun) {
+                        shouldRun = true;
+                        // Calculate next occurrence
+                        if(r.freq === 'daily') nextRunDate.setDate(nextRunDate.getDate() + 1);
+                        else if(r.freq === 'weekly') nextRunDate.setDate(nextRunDate.getDate() + 7);
+                        else if(r.freq === 'monthly') nextRunDate.setMonth(nextRunDate.getMonth() + 1);
+                        else if(r.freq === 'yearly') nextRunDate.setFullYear(nextRunDate.getFullYear() + 1);
+                        r.nextRun = nextRunDate.toISOString().split('T')[0];
+                    }
+                }
+
+                if (shouldRun) {
                     data.transactions.unshift({
                         id: Date.now() + Math.random(), 
                         desc: "Auto: " + r.desc,
@@ -433,28 +471,14 @@
                         category: "Bills",
                         account: r.account
                     });
-                    
                     if(r.type==='expense') data.accounts[r.account]-=r.amount; else data.accounts[r.account]+=r.amount;
-                    
-                    // Calculate NEW nextRun
-                    let nextDate = new Date(r.nextRun);
-                    if(r.freq === 'daily') nextDate.setDate(nextDate.getDate() + 1);
-                    if(r.freq === 'weekly') nextDate.setDate(nextDate.getDate() + 7);
-                    if(r.freq === 'monthly') nextDate.setMonth(nextDate.getMonth() + 1);
-                    if(r.freq === 'yearly') nextDate.setFullYear(nextDate.getFullYear() + 1);
-                    
-                    r.nextRun = nextDate.toISOString().split('T')[0];
                     changed = true;
                     count++;
                 }
-            });
-
-            if(changed) {
-                saveData();
-                showToast(`Processed ${count} recurring items`, "info");
-            } else if (manual) {
-                showToast("Nothing due today", "success");
             }
+
+            if(changed) { saveData(); showToast(`Processed ${count} items`, "info"); } 
+            else if (manual) { showToast("Nothing due today", "success"); }
         }
 
         // --- FILTER ---
@@ -536,10 +560,8 @@
         function renderWallets() {
             const list = document.getElementById('walletList'); list.innerHTML = "";
             const selects = [document.getElementById('account'), document.getElementById('fromAccount'), document.getElementById('toAccount'), document.getElementById('recurAcc')];
-            // Reset Dropdowns
             selects.forEach(s => { if(s) s.innerHTML = "<option disabled selected>Select Wallet</option>"; });
 
-            // Populate based on Order
             data.accountOrder.forEach(k => {
                 if(!data.accounts.hasOwnProperty(k)) return; 
                 const v = data.accounts[k];
@@ -567,13 +589,12 @@
         }
 
         function renderPlanning() {
-            // Recurring
             const rList = document.getElementById('recurList'); rList.innerHTML="";
             if(data.recurring.length===0) rList.innerHTML = "<p style='text-align:center;color:var(--text-muted);'>No active rules.</p>";
             data.recurring.forEach((r, i) => {
                 const nextDate = new Date(r.nextRun);
                 const dateStr = nextDate.toLocaleDateString('en-US', {month:'short', day:'numeric'});
-                const freqMap = {daily:'Daily', weekly:'Weekly', monthly:'Monthly', yearly:'Yearly'};
+                const freqMap = {daily:'Daily', weekly:'Weekly', monthly:'Monthly', yearly:'Yearly', date:'One-Time'};
                 rList.innerHTML += `
                     <div class="list-item">
                         <div>
@@ -584,7 +605,6 @@
                         <button class="btn-icon-only" style="color:var(--danger);width:30px;height:30px;" onclick="delRecur(${i})">✕</button>
                     </div>`;
             });
-            // Budgets
             const bList = document.getElementById('budgetList'); bList.innerHTML = "";
             const spent = {};
             data.transactions.forEach(t => { if(t.type==='expense') spent[t.category] = (spent[t.category]||0) + t.amount; });
@@ -593,7 +613,6 @@
                 const used = spent[cat] || 0; const pct = Math.min((used/limit)*100, 100); const isOver = used > limit;
                 bList.innerHTML += `<div style="margin-bottom:15px;"><div class="flex-between" style="font-size:0.9rem;margin-bottom:5px;"><strong>${cat}</strong><span style="color:${isOver?'var(--danger)':'var(--text-muted)'}">₹${used} / ₹${limit}</span></div><div class="progress-track"><div class="progress-fill ${isOver?'red':''}" style="width:${pct}%"></div></div></div>`;
             }
-            // Goals & Bills (Same)
             const gList = document.getElementById('goalList'); gList.innerHTML = "";
             if(data.goals.length===0) gList.innerHTML = "<p style='text-align:center;color:var(--text-muted);'>No goals.</p>";
             data.goals.forEach(g => { const pct = Math.min((g.saved/g.target)*100, 100); gList.innerHTML += `<div style="background:var(--input-bg);padding:15px;border-radius:20px;margin-bottom:10px;"><div class="flex-between"><strong>${g.name}</strong><span style="font-size:0.85rem;color:var(--success);">₹${g.saved} / ₹${g.target}</span></div><div class="progress-track" style="margin-bottom:10px;"><div class="progress-fill" style="width:${pct}%"></div></div><div class="flex-between"><button class="btn-ghost" style="color:var(--primary);padding:0;" onclick="addFunds(${g.id})">+ Add</button><button class="btn-ghost" style="color:var(--danger);padding:0;" onclick="delGoal(${g.id})">Del</button></div></div>`; });
@@ -613,7 +632,15 @@
         }
 
         function selectCategory(c) { document.getElementById('selectedCategory').value = c; renderCategoryUI(); }
-        function getCatIcon(c) { const map = { 'Food':'🍔','Transport':'🚕','Shopping':'🛍️','Entertainment':'🎬','Bills':'⚡','Education':'📚','Salary':'💰','Health':'💊'}; return map[c] || '⚪'; }
+        
+        // --- UPDATED ICON LOGIC ---
+        function getCatIcon(c) { 
+            // 1. Check custom icons
+            if(data.categoryIcons && data.categoryIcons[c]) return data.categoryIcons[c];
+            // 2. Default hardcoded map
+            const map = { 'Food':'🍔','Transport':'🚕','Shopping':'🛍️','Entertainment':'🎬','Bills':'⚡','Education':'📚','Salary':'💰','Health':'💊','Groceries':'🛒'}; 
+            return map[c] || '⚪'; 
+        }
 
         // --- ACTIONS ---
         function setMode(m) { addMode = m; document.getElementById('mode-trans').className = m==='trans'?'mode-btn active':'mode-btn'; document.getElementById('mode-transfer').className = m==='transfer'?'mode-btn active':'mode-btn'; document.getElementById('field-trans').style.display = m==='trans'?'block':'none'; document.getElementById('field-transfer').style.display = m==='transfer'?'block':'none'; }
@@ -654,8 +681,21 @@
         function addWallet() { const n=document.getElementById('newWallet').value; if(n && !data.accounts[n]) { data.accounts[n]=0; data.accountOrder.push(n); saveData(); document.getElementById('newWallet').value=""; } }
         function delAcc(n) { if(confirm("Delete?")) { delete data.accounts[n]; data.accountOrder = data.accountOrder.filter(x=>x!==n); saveData(); } }
         function renameAcc(o) { const n=prompt("Rename:",o); if(n&&n!==o&&!data.accounts[n]) { data.accounts[n]=data.accounts[o]; delete data.accounts[o]; data.accountOrder[data.accountOrder.indexOf(o)] = n; data.transactions.forEach(t=>{if(t.account===o)t.account=n}); data.recurring.forEach(r=>{if(r.account===o)r.account=n}); saveData(); } }
-        function addCategory() { const n=document.getElementById('newCatInput').value; if(n&&!data.categories.includes(n)) { data.categories.push(n); document.getElementById('newCatInput').value=""; saveData(); } }
-        function delCat(c) { if(confirm("Delete?")) { data.categories=data.categories.filter(x=>x!==c); saveData(); } }
+        
+        // --- UPDATED ADD CATEGORY ---
+        function addCategory() { 
+            const n=document.getElementById('newCatInput').value; 
+            const icon=document.getElementById('newCatIcon').value || '⚪'; 
+            if(n && !data.categories.includes(n)) { 
+                data.categories.push(n); 
+                // Save custom icon
+                data.categoryIcons[n] = icon;
+                document.getElementById('newCatInput').value=""; 
+                document.getElementById('newCatIcon').value="";
+                saveData(); 
+            } 
+        }
+        function delCat(c) { if(confirm("Delete?")) { data.categories=data.categories.filter(x=>x!==c); delete data.categoryIcons[c]; saveData(); } }
         
         // Planning
         function showRecurForm() { document.getElementById('recurForm').style.display='block'; }
@@ -665,9 +705,22 @@
             const start=document.getElementById('recurStartDate').value;
             const t=document.getElementById('recurType').value; const acc=document.getElementById('recurAcc').value;
             
-            if(d && a && start && acc && acc !== "Select Wallet") { 
-                // Store nextRun based on user selected start date
-                data.recurring.push({id:Date.now(), desc:d, amount:a, freq: freq, nextRun: start, type:t, account:acc}); 
+            // For monthly, get day from day input, for others from date input
+            let nextRunVal = start;
+            let dayVal = 1;
+            
+            if(freq === 'monthly') {
+                dayVal = parseInt(document.getElementById('recurDay').value);
+                // Calculate first run date
+                const now = new Date();
+                let runDate = new Date();
+                runDate.setDate(dayVal);
+                if(now.getDate() > dayVal) runDate.setMonth(runDate.getMonth()+1);
+                nextRunVal = runDate.toISOString().split('T')[0];
+            }
+
+            if(d && a && nextRunVal && acc && acc !== "Select Wallet") { 
+                data.recurring.push({id:Date.now(), desc:d, amount:a, freq: freq, nextRun: nextRunVal, day: dayVal, type:t, account:acc}); 
                 saveData(); document.getElementById('recurForm').style.display='none'; 
             } else {
                 showToast("Check input", "error");
@@ -710,6 +763,7 @@
                         goals: imported.goals || [],
                         bills: imported.bills || [],
                         categories: imported.categories || ["Food", "Transport", "Shopping", "Entertainment", "Bills", "Health", "Education", "Salary"],
+                        categoryIcons: imported.categoryIcons || { "Groceries": "🛒" },
                         recurring: imported.recurring || []
                     };
                     saveData();
