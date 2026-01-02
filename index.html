@@ -3,11 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>KASU V11</title>
+    <title>KASU V12</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root {
+            /* Palette */
             --primary: #6366f1;
             --primary-grad: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
             --bg: #f8fafc;
@@ -106,6 +107,12 @@
         .cat-icon-circle { width: 50px; height: 50px; border-radius: 18px; background: var(--input-bg); display: flex; align-items: center; justify-content: center; font-size: 1.5rem; border: 2px solid transparent; transition: 0.2s; }
         .cat-item.selected .cat-icon-circle { border-color: var(--primary); background: var(--surface); box-shadow: 0 5px 15px rgba(0,0,0,0.05); }
         .cat-label { font-size: 0.7rem; font-weight: 600; color: var(--text-muted); }
+
+        /* Emoji Picker Popup */
+        .emoji-picker-container { display: none; position: absolute; bottom: 60px; left: 0; width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 10px; box-shadow: var(--shadow); z-index: 500; height: 200px; overflow-y: auto; grid-template-columns: repeat(6, 1fr); gap: 5px; }
+        .emoji-picker-container.show { display: grid; }
+        .emoji-btn-item { font-size: 1.4rem; background: var(--input-bg); border: none; padding: 8px; border-radius: 8px; cursor: pointer; transition: 0.1s; }
+        .emoji-btn-item:active { transform: scale(0.9); background: var(--primary); }
 
         /* Lists */
         .date-header { font-size: 0.8rem; font-weight: 700; color: var(--text-muted); margin: 20px 0 10px 0; text-transform: uppercase; letter-spacing: 1px; }
@@ -312,21 +319,40 @@
             <div id="tab-more" class="view" style="display:none;">
                 <div class="card">
                     <h2>Wallets</h2>
-                    <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:10px;">Use ↑ ↓ arrows to rearrange.</p>
+                    <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:10px;">Use ↑ ↓ arrows to rearrange. Max 20 wallets.</p>
                     <div id="walletList"></div>
-                    <div style="margin-top:20px; display:flex; gap:10px;">
-                        <input type="text" id="newWallet" placeholder="Wallet Name" style="margin:0;">
-                        <button class="btn btn-primary" style="width:auto;" onclick="addWallet()">Add</button>
+                    
+                    <div style="margin-top:20px; border-top:1px solid var(--border); padding-top:15px;">
+                        <h3 style="font-size:0.9rem;">Add New Wallet</h3>
+                        <input type="text" id="newWallet" placeholder="Wallet Name" style="margin-bottom:10px;">
+                        
+                        <div style="display:flex; gap:10px; margin-bottom:10px;">
+                            <select id="walletType" onchange="toggleWalletType()">
+                                <option value="standard">Standard Account</option>
+                                <option value="limit">Monthly Limit / Allowance</option>
+                            </select>
+                        </div>
+                        
+                        <div id="limitOptions" style="display:none; gap:10px; margin-bottom:10px;">
+                            <input type="number" id="limitAmount" placeholder="Limit Amount">
+                            <input type="number" id="limitDay" placeholder="Reset Day (1-28)" min="1" max="28">
+                        </div>
+
+                        <button class="btn btn-primary" style="width:auto;" onclick="addWallet()">Add Wallet</button>
                     </div>
                 </div>
                 
                 <div class="card">
                     <h2>Custom Categories</h2>
                     <div style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:15px;" id="manageCatList"></div>
-                    <div style="display:flex; gap:10px;">
-                        <input type="text" id="newCatIcon" placeholder="😀" style="margin:0; width:60px; text-align:center;" maxlength="2">
+                    
+                    <div style="position:relative; display:flex; gap:10px;">
+                        <button id="emojiTrigger" onclick="toggleEmojiPicker()" class="btn" style="width:60px; font-size:1.5rem; padding:0; background:var(--input-bg); color:var(--text);">😀</button>
                         <input type="text" id="newCatInput" placeholder="Name (e.g. Gym)" style="margin:0; flex:1;">
                         <button class="btn btn-primary" style="width:auto;" onclick="addCategory()">Add</button>
+                        
+                        <div id="emojiPicker" class="emoji-picker-container">
+                            </div>
                     </div>
                 </div>
 
@@ -350,14 +376,21 @@
     </nav>
 
     <script>
+        // --- CONSTANTS ---
+        const EMOJI_LIST = [
+            '🍕','🍔','🍟','🍿','☕','🍺','🛒','🛍️','👔','👗','🚕','🚌','✈️','⛽',
+            '🏠','💡','⚡','🚿','📞','💻','📱','🎮','🎬','🎵','📚','🎓','💊','🏋️',
+            '⚽','🎨','🐶','🎁','💰','🏦','💸','🔧','🔨','🧹','🍼','👶','💼','🎉',
+            '❤️','🏥','🦷','👓','🕰️','📅','🔒','🔑','🏳️','🏁','✂️','🖊️','📝','📦'
+        ];
+
         // --- DATA STORE ---
         let data = { 
             accounts: { "Cash": 0, "Bank": 0 }, 
             accountOrder: ["Cash", "Bank"], 
+            accountMeta: {}, 
             transactions: [], budgets: {}, goals: [], bills: [],
-            // Added Groceries by default
             categories: ["Food", "Groceries", "Transport", "Shopping", "Entertainment", "Bills", "Health", "Education", "Salary"],
-            // Added Emoji Mapping
             categoryIcons: { "Groceries": "🛒" },
             recurring: [] 
         };
@@ -366,6 +399,7 @@
         let chartInstance = null;
         let addMode = 'trans';
         let currentFilter = 'all';
+        let selectedEmoji = "😀";
 
         // --- AUTH ---
         function inputPin(n) { if(currentPin.length<4) { currentPin+=n; updatePinUI(); } }
@@ -385,6 +419,7 @@
             loadData();
             setGreeting();
             processRecurring();
+            checkAccountResets();
         }
 
         // --- CORE ---
@@ -395,8 +430,8 @@
                 data = { ...data, ...parsed };
                 if(!data.accountOrder || data.accountOrder.length === 0) data.accountOrder = Object.keys(data.accounts);
                 if(!data.recurring) data.recurring = [];
-                // Init icons map if missing
                 if(!data.categoryIcons) data.categoryIcons = { "Groceries": "🛒" };
+                if(!data.accountMeta) data.accountMeta = {};
             }
             if(localStorage.getItem('kasu_theme') === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
             renderAll();
@@ -420,18 +455,57 @@
             document.getElementById('greeting').innerText = g;
         }
 
-        // --- RECURRING LOGIC ---
+        // --- EMOJI PICKER ---
+        function toggleEmojiPicker() {
+            const picker = document.getElementById('emojiPicker');
+            if(picker.style.display === 'grid') {
+                picker.style.display = 'none';
+            } else {
+                picker.innerHTML = '';
+                EMOJI_LIST.forEach(emoji => {
+                    const btn = document.createElement('button');
+                    btn.className = 'emoji-btn-item';
+                    btn.innerText = emoji;
+                    btn.onclick = () => selectNewEmoji(emoji);
+                    picker.appendChild(btn);
+                });
+                picker.style.display = 'grid';
+            }
+        }
+
+        function selectNewEmoji(emoji) {
+            selectedEmoji = emoji;
+            document.getElementById('emojiTrigger').innerText = emoji;
+            document.getElementById('emojiPicker').style.display = 'none';
+        }
+
+        // --- ACCOUNT LIMITS ---
+        function checkAccountResets() {
+            const now = new Date();
+            let changed = false;
+            Object.keys(data.accounts).forEach(acc => {
+                const meta = data.accountMeta?.[acc];
+                if(meta && meta.type === 'limit') {
+                    const last = new Date(meta.lastReset || 0);
+                    const isNewMonth = (now.getMonth() !== last.getMonth()) || (now.getFullYear() !== last.getFullYear());
+                    if (isNewMonth && now.getDate() >= meta.day) {
+                        data.accounts[acc] = parseFloat(meta.limit);
+                        meta.lastReset = now.getTime();
+                        changed = true;
+                        showToast(`Refreshed ${acc} to ₹${meta.limit}`, 'info');
+                    }
+                }
+            });
+            if(changed) saveData();
+        }
+
+        // --- RECURRING ---
         function toggleRecurMode() {
             const freq = document.getElementById('recurFreq').value;
             const dayInput = document.getElementById('recurDayInput');
             const dateInput = document.getElementById('recurDateBox');
-            if (freq === 'monthly') {
-                dayInput.style.display = 'block';
-                dateInput.style.display = 'none';
-            } else {
-                dayInput.style.display = 'none';
-                dateInput.style.display = 'block';
-            }
+            if (freq === 'monthly') { dayInput.style.display = 'block'; dateInput.style.display = 'none'; } 
+            else { dayInput.style.display = 'none'; dateInput.style.display = 'block'; }
         }
 
         function processRecurring(manual = false) {
@@ -445,15 +519,11 @@
                 let shouldRun = false;
 
                 if (r.freq === 'date') {
-                    if (todayStr >= r.nextRun) {
-                        shouldRun = true;
-                        data.recurring.splice(i, 1); 
-                    }
+                    if (todayStr >= r.nextRun) { shouldRun = true; data.recurring.splice(i, 1); }
                 } else {
                     let nextRunDate = new Date(r.nextRun);
                     if (todayStr >= r.nextRun) {
                         shouldRun = true;
-                        // Calculate next occurrence
                         if(r.freq === 'daily') nextRunDate.setDate(nextRunDate.getDate() + 1);
                         else if(r.freq === 'weekly') nextRunDate.setDate(nextRunDate.getDate() + 7);
                         else if(r.freq === 'monthly') nextRunDate.setMonth(nextRunDate.getMonth() + 1);
@@ -463,20 +533,11 @@
                 }
 
                 if (shouldRun) {
-                    data.transactions.unshift({
-                        id: Date.now() + Math.random(), 
-                        desc: "Auto: " + r.desc,
-                        amount: r.amount,
-                        type: r.type,
-                        category: "Bills",
-                        account: r.account
-                    });
+                    data.transactions.unshift({ id: Date.now() + Math.random(), desc: "Auto: " + r.desc, amount: r.amount, type: r.type, category: "Bills", account: r.account });
                     if(r.type==='expense') data.accounts[r.account]-=r.amount; else data.accounts[r.account]+=r.amount;
-                    changed = true;
-                    count++;
+                    changed = true; count++;
                 }
             }
-
             if(changed) { saveData(); showToast(`Processed ${count} items`, "info"); } 
             else if (manual) { showToast("Nothing due today", "success"); }
         }
@@ -565,6 +626,10 @@
             data.accountOrder.forEach(k => {
                 if(!data.accounts.hasOwnProperty(k)) return; 
                 const v = data.accounts[k];
+                const meta = data.accountMeta?.[k];
+                const isLimit = meta && meta.type === 'limit';
+                const limitInfo = isLimit ? `<span style="font-size:0.7rem; color:var(--primary);">🔄 Limit ₹${meta.limit} (Day ${meta.day})</span>` : '';
+
                 list.innerHTML += `
                     <div class="list-item">
                         <div style="display:flex;align-items:center;">
@@ -573,7 +638,11 @@
                                 <button onclick="moveWallet('${k}', 'down')" style="border:none;background:none;font-size:0.8rem;cursor:pointer;color:var(--text-muted);">▼</button>
                             </div>
                             <div class="icon-box">💳</div>
-                            <div><div style="font-weight:600;">${k}</div><div style="font-size:0.85rem;color:var(--text-muted);">₹${v.toFixed(2)}</div></div>
+                            <div>
+                                <div style="font-weight:600;">${k}</div>
+                                <div style="font-size:0.85rem;color:var(--text-muted);">₹${v.toFixed(2)}</div>
+                                ${limitInfo}
+                            </div>
                         </div>
                         <div><button class="btn-icon-only" style="display:inline-flex;" onclick="renameAcc('${k}')">✎</button><button class="btn-icon-only" style="display:inline-flex;color:var(--danger);" onclick="delAcc('${k}')">✕</button></div>
                     </div>`;
@@ -633,11 +702,8 @@
 
         function selectCategory(c) { document.getElementById('selectedCategory').value = c; renderCategoryUI(); }
         
-        // --- UPDATED ICON LOGIC ---
         function getCatIcon(c) { 
-            // 1. Check custom icons
             if(data.categoryIcons && data.categoryIcons[c]) return data.categoryIcons[c];
-            // 2. Default hardcoded map
             const map = { 'Food':'🍔','Transport':'🚕','Shopping':'🛍️','Entertainment':'🎬','Bills':'⚡','Education':'📚','Salary':'💰','Health':'💊','Groceries':'🛒'}; 
             return map[c] || '⚪'; 
         }
@@ -678,22 +744,33 @@
         }
 
         // --- MANAGE ---
-        function addWallet() { const n=document.getElementById('newWallet').value; if(n && !data.accounts[n]) { data.accounts[n]=0; data.accountOrder.push(n); saveData(); document.getElementById('newWallet').value=""; } }
-        function delAcc(n) { if(confirm("Delete?")) { delete data.accounts[n]; data.accountOrder = data.accountOrder.filter(x=>x!==n); saveData(); } }
-        function renameAcc(o) { const n=prompt("Rename:",o); if(n&&n!==o&&!data.accounts[n]) { data.accounts[n]=data.accounts[o]; delete data.accounts[o]; data.accountOrder[data.accountOrder.indexOf(o)] = n; data.transactions.forEach(t=>{if(t.account===o)t.account=n}); data.recurring.forEach(r=>{if(r.account===o)r.account=n}); saveData(); } }
+        function toggleWalletType() {
+            const t = document.getElementById('walletType').value;
+            const opts = document.getElementById('limitOptions');
+            opts.style.display = t === 'limit' ? 'flex' : 'none';
+        }
+
+        function addWallet() { 
+            if(Object.keys(data.accounts).length >= 20) { showToast("Max 20 wallets reached", "error"); return; }
+            const n = document.getElementById('newWallet').value.trim();
+            const type = document.getElementById('walletType').value;
+            if(n && !data.accounts[n]) { 
+                data.accounts[n] = 0; data.accountOrder.push(n); 
+                if(type === 'limit') {
+                    const l = document.getElementById('limitAmount').value;
+                    const d = document.getElementById('limitDay').value;
+                    if(l && d) { data.accountMeta[n] = { type: 'limit', limit: l, day: d, lastReset: 0 }; data.accounts[n] = parseFloat(l); }
+                }
+                saveData(); document.getElementById('newWallet').value=""; 
+            } else { showToast("Invalid Name or Exists", "error"); }
+        }
+
+        function delAcc(n) { if(confirm("Delete?")) { delete data.accounts[n]; data.accountOrder = data.accountOrder.filter(x=>x!==n); delete data.accountMeta[n]; saveData(); } }
+        function renameAcc(o) { const n=prompt("Rename:",o); if(n&&n!==o&&!data.accounts[n]) { data.accounts[n]=data.accounts[o]; delete data.accounts[o]; data.accountOrder[data.accountOrder.indexOf(o)] = n; data.transactions.forEach(t=>{if(t.account===o)t.account=n}); data.recurring.forEach(r=>{if(r.account===o)r.account=n}); if(data.accountMeta[o]) { data.accountMeta[n]=data.accountMeta[o]; delete data.accountMeta[o]; } saveData(); } }
         
-        // --- UPDATED ADD CATEGORY ---
         function addCategory() { 
-            const n=document.getElementById('newCatInput').value; 
-            const icon=document.getElementById('newCatIcon').value || '⚪'; 
-            if(n && !data.categories.includes(n)) { 
-                data.categories.push(n); 
-                // Save custom icon
-                data.categoryIcons[n] = icon;
-                document.getElementById('newCatInput').value=""; 
-                document.getElementById('newCatIcon').value="";
-                saveData(); 
-            } 
+            const n=document.getElementById('newCatInput').value; const icon=selectedEmoji; 
+            if(n && !data.categories.includes(n)) { data.categories.push(n); data.categoryIcons[n] = icon; document.getElementById('newCatInput').value=""; saveData(); } 
         }
         function delCat(c) { if(confirm("Delete?")) { data.categories=data.categories.filter(x=>x!==c); delete data.categoryIcons[c]; saveData(); } }
         
@@ -704,27 +781,17 @@
             const freq=document.getElementById('recurFreq').value; 
             const start=document.getElementById('recurStartDate').value;
             const t=document.getElementById('recurType').value; const acc=document.getElementById('recurAcc').value;
-            
-            // For monthly, get day from day input, for others from date input
             let nextRunVal = start;
             let dayVal = 1;
-            
             if(freq === 'monthly') {
                 dayVal = parseInt(document.getElementById('recurDay').value);
-                // Calculate first run date
                 const now = new Date();
                 let runDate = new Date();
                 runDate.setDate(dayVal);
                 if(now.getDate() > dayVal) runDate.setMonth(runDate.getMonth()+1);
                 nextRunVal = runDate.toISOString().split('T')[0];
             }
-
-            if(d && a && nextRunVal && acc && acc !== "Select Wallet") { 
-                data.recurring.push({id:Date.now(), desc:d, amount:a, freq: freq, nextRun: nextRunVal, day: dayVal, type:t, account:acc}); 
-                saveData(); document.getElementById('recurForm').style.display='none'; 
-            } else {
-                showToast("Check input", "error");
-            }
+            if(d && a && nextRunVal && acc && acc !== "Select Wallet") { data.recurring.push({id:Date.now(), desc:d, amount:a, freq: freq, nextRun: nextRunVal, day: dayVal, type:t, account:acc}); saveData(); document.getElementById('recurForm').style.display='none'; } else { showToast("Check input", "error"); }
         }
         function delRecur(i) { data.recurring.splice(i,1); saveData(); }
 
@@ -743,10 +810,8 @@
         function switchTab(t) { document.querySelectorAll('.view').forEach(e => e.style.display='none'); document.querySelectorAll('.tab-btn').forEach(e => e.classList.remove('active')); document.getElementById(`tab-${t}`).style.display='block'; if(t!=='add') document.getElementById(`btn-${t}`).classList.add('active'); renderAll(); }
         function toggleTheme() { const c = document.documentElement.getAttribute('data-theme'); const n = c==='dark'?'light':'dark'; document.documentElement.setAttribute('data-theme', n); localStorage.setItem('kasu_theme', n); renderChart(); }
         
-        // --- FIXED IMPORT LOGIC ---
         function exportCSV() { let csv = "Date,Desc,Cat,Type,Amt,Acc\n"; data.transactions.forEach(t => { csv += `${new Date(t.id).toLocaleDateString()},${t.desc},${t.category},${t.type},${t.amount},${t.account}\n`; }); const b = new Blob([csv], {type:'text/csv'}); const a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download='kasu.csv'; a.click(); }
         function exportData() { const b=new Blob([JSON.stringify(data)], {type:'application/json'}); const a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download='kasu_backup.json'; a.click(); }
-        
         function importData(input) {
             const file = input.files[0];
             if (!file) return;
@@ -754,10 +819,10 @@
             reader.onload = function(e) {
                 try {
                     const imported = JSON.parse(e.target.result);
-                    // Safe Merge to prevent crashes
                     data = {
                         accounts: imported.accounts || {},
                         accountOrder: imported.accountOrder || Object.keys(imported.accounts || {}),
+                        accountMeta: imported.accountMeta || {},
                         transactions: imported.transactions || [],
                         budgets: imported.budgets || {},
                         goals: imported.goals || [],
@@ -770,11 +835,10 @@
                     showToast("Restored Successfully!", "success");
                 } catch (err) {
                     showToast("Error reading file", "error");
-                    console.error(err);
                 }
             };
             reader.readAsText(file);
-            input.value = ''; // Reset
+            input.value = ''; 
         }
 
         function resetApp() { if(confirm("Reset everything?")) { localStorage.clear(); location.reload(); } }
