@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>KASU V12.2</title>
+    <title>KASU V13 </title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
@@ -287,12 +287,17 @@
                     </div>
 
                     <form onsubmit="handleSubmit(event)">
-                        <div style="text-align:center; margin-bottom:20px;">
+                        <div style="text-align:center; margin-bottom:10px;">
                             <label style="font-size:0.8rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:1px;">Amount</label>
                             <input type="number" id="amount" placeholder="0" style="font-size:3rem; text-align:center; font-weight:800; background:transparent; border:none; padding:10px; color:var(--text);" required>
                         </div>
 
                         <div id="field-trans">
+                            <div style="margin-bottom:15px;">
+                                <label style="font-size:0.8rem; color:var(--text-muted);">Date & Time</label>
+                                <input type="datetime-local" id="transDate" style="padding:12px;">
+                            </div>
+
                             <input type="text" id="desc" placeholder="Note">
                             <label style="font-size:0.85rem; color:var(--text-muted); margin-bottom:10px; display:block;">Category</label>
                             <div class="cat-grid" id="categoryGrid"></div>
@@ -420,6 +425,11 @@
             setGreeting();
             processRecurring();
             checkAccountResets();
+            
+            // Set Default Date
+            const now = new Date();
+            now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+            document.getElementById('transDate').value = now.toISOString().slice(0,16);
         }
 
         // --- CORE ---
@@ -432,6 +442,8 @@
                 if(!data.recurring) data.recurring = [];
                 if(!data.categoryIcons) data.categoryIcons = { "Groceries": "🛒" };
                 if(!data.accountMeta) data.accountMeta = {};
+                // Ensure migration if transactions lack date
+                data.transactions.forEach(t => { if(!t.date) t.date = t.id; }); 
             }
             if(localStorage.getItem('kasu_theme') === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
             renderAll();
@@ -533,7 +545,8 @@
                 }
 
                 if (shouldRun) {
-                    data.transactions.unshift({ id: Date.now() + Math.random(), desc: "Auto: " + r.desc, amount: r.amount, type: r.type, category: "Bills", account: r.account });
+                    const ts = Date.now();
+                    data.transactions.unshift({ id: ts, date: ts, desc: "Auto: " + r.desc, amount: r.amount, type: r.type, category: "Bills", account: r.account });
                     if(r.type==='expense') data.accounts[r.account]-=r.amount; else data.accounts[r.account]+=r.amount;
                     changed = true; count++;
                 }
@@ -561,13 +574,17 @@
             const now = new Date();
             const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
             let filtered = data.transactions;
-            if (currentFilter === 'today') filtered = filtered.filter(t => t.id >= startOfDay);
-            else if (currentFilter === 'month') filtered = filtered.filter(t => t.id >= now.getTime() - (30 * 86400000));
-            else if (currentFilter === 'year') filtered = filtered.filter(t => t.id >= now.getTime() - (365 * 86400000));
+            
+            // Filter using the .date property if available, fallback to .id
+            const getDate = (t) => t.date || t.id;
+
+            if (currentFilter === 'today') filtered = filtered.filter(t => getDate(t) >= startOfDay);
+            else if (currentFilter === 'month') filtered = filtered.filter(t => getDate(t) >= now.getTime() - (30 * 86400000));
+            else if (currentFilter === 'year') filtered = filtered.filter(t => getDate(t) >= now.getTime() - (365 * 86400000));
             else if (currentFilter === 'custom') {
                 const s = document.getElementById('startDate').valueAsDate;
                 const e = document.getElementById('endDate').valueAsDate;
-                if(s && e) { e.setHours(23, 59, 59, 999); filtered = filtered.filter(t => t.id >= s.getTime() && t.id <= e.getTime()); }
+                if(s && e) { e.setHours(23, 59, 59, 999); filtered = filtered.filter(t => getDate(t) >= s.getTime() && getDate(t) <= e.getTime()); }
             }
             return filtered;
         }
@@ -580,10 +597,12 @@
             const list = document.getElementById('recentList'); list.innerHTML = "";
             if(filteredTx.length===0) { list.innerHTML = "<p style='text-align:center;color:var(--text-muted);padding:20px;'>No transactions found.</p>"; renderChart([]); return; }
 
-            filteredTx.sort((a,b) => b.id - a.id);
+            // Sort by Date property
+            filteredTx.sort((a,b) => (b.date || b.id) - (a.date || a.id));
+            
             let lastDate = "";
             filteredTx.forEach(t => {
-                const dateObj = new Date(t.id);
+                const dateObj = new Date(t.date || t.id);
                 const today = new Date();
                 const yesterday = new Date(today); yesterday.setDate(yesterday.getDate() - 1);
                 let dateStr = dateObj.toLocaleDateString();
@@ -715,7 +734,13 @@
             e.preventDefault();
             const amt = parseFloat(document.getElementById('amount').value);
             if(!amt) { showToast("Enter amount", "error"); return; }
-            const id = Date.now();
+            
+            // Get date from picker, default to now if empty
+            const dateVal = document.getElementById('transDate').value;
+            const dateObj = dateVal ? new Date(dateVal) : new Date();
+            const ts = dateObj.getTime();
+            const createId = Date.now(); // Metadata stamp
+
             if(addMode === 'trans') {
                 const desc = document.getElementById('desc').value || 'Expense';
                 const cat = document.getElementById('selectedCategory').value;
@@ -724,12 +749,12 @@
                 if(!acc || acc === "Select Wallet") { showToast("Select a wallet", "error"); return; }
 
                 if(type === 'expense') data.accounts[acc] -= amt; else data.accounts[acc] += amt;
-                data.transactions.unshift({ id, desc, amount: amt, type, category: cat, account: acc });
+                data.transactions.unshift({ id: createId, date: ts, desc, amount: amt, type, category: cat, account: acc });
             } else {
                 const from = document.getElementById('fromAccount').value; const to = document.getElementById('toAccount').value;
                 if(!from || !to || from === to) { showToast("Invalid accounts", "error"); return; }
                 data.accounts[from] -= amt; data.accounts[to] += amt;
-                data.transactions.unshift({ id, desc: `To ${to}`, amount: amt, type: 'transfer', category: 'Transfer', account: from });
+                data.transactions.unshift({ id: createId, date: ts, desc: `To ${to}`, amount: amt, type: 'transfer', category: 'Transfer', account: from });
             }
             saveData(); showToast("Saved!"); document.getElementById('amount').value=""; document.getElementById('desc').value=""; switchTab('home');
         }
@@ -810,7 +835,7 @@
         function switchTab(t) { document.querySelectorAll('.view').forEach(e => e.style.display='none'); document.querySelectorAll('.tab-btn').forEach(e => e.classList.remove('active')); document.getElementById(`tab-${t}`).style.display='block'; if(t!=='add') document.getElementById(`btn-${t}`).classList.add('active'); renderAll(); }
         function toggleTheme() { const c = document.documentElement.getAttribute('data-theme'); const n = c==='dark'?'light':'dark'; document.documentElement.setAttribute('data-theme', n); localStorage.setItem('kasu_theme', n); renderChart(); }
         
-        function exportCSV() { let csv = "Date,Desc,Cat,Type,Amt,Acc\n"; data.transactions.forEach(t => { csv += `${new Date(t.id).toLocaleDateString()},${t.desc},${t.category},${t.type},${t.amount},${t.account}\n`; }); const b = new Blob([csv], {type:'text/csv'}); const a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download='kasu.csv'; a.click(); }
+        function exportCSV() { let csv = "Date,Desc,Cat,Type,Amt,Acc\n"; data.transactions.forEach(t => { csv += `${new Date(t.date||t.id).toLocaleDateString()},${t.desc},${t.category},${t.type},${t.amount},${t.account}\n`; }); const b = new Blob([csv], {type:'text/csv'}); const a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download='kasu.csv'; a.click(); }
         function exportData() { const b=new Blob([JSON.stringify(data)], {type:'application/json'}); const a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download='kasu_backup.json'; a.click(); }
         function importData(input) {
             const file = input.files[0];
