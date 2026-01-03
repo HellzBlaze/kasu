@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>KASU V13 </title>
+    <title>KASU V13 (Date Backup)</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
@@ -835,8 +835,26 @@
         function switchTab(t) { document.querySelectorAll('.view').forEach(e => e.style.display='none'); document.querySelectorAll('.tab-btn').forEach(e => e.classList.remove('active')); document.getElementById(`tab-${t}`).style.display='block'; if(t!=='add') document.getElementById(`btn-${t}`).classList.add('active'); renderAll(); }
         function toggleTheme() { const c = document.documentElement.getAttribute('data-theme'); const n = c==='dark'?'light':'dark'; document.documentElement.setAttribute('data-theme', n); localStorage.setItem('kasu_theme', n); renderChart(); }
         
-        function exportCSV() { let csv = "Date,Desc,Cat,Type,Amt,Acc\n"; data.transactions.forEach(t => { csv += `${new Date(t.date||t.id).toLocaleDateString()},${t.desc},${t.category},${t.type},${t.amount},${t.account}\n`; }); const b = new Blob([csv], {type:'text/csv'}); const a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download='kasu.csv'; a.click(); }
-        function exportData() { const b=new Blob([JSON.stringify(data)], {type:'application/json'}); const a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download='kasu_backup.json'; a.click(); }
+        function exportCSV() { 
+            let csv = "Date,Desc,Cat,Type,Amt,Acc\n"; 
+            data.transactions.forEach(t => { csv += `${new Date(t.date||t.id).toLocaleDateString()},${t.desc},${t.category},${t.type},${t.amount},${t.account}\n`; }); 
+            const date = new Date();
+            const d = String(date.getDate()).padStart(2, '0');
+            const m = String(date.getMonth() + 1).padStart(2, '0');
+            const y = date.getFullYear();
+            const fileName = `kasu_data(${d}-${m}-${y}).csv`;
+            const b = new Blob([csv], {type:'text/csv'}); 
+            const a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download=fileName; a.click(); 
+        }
+        function exportData() { 
+            const date = new Date();
+            const d = String(date.getDate()).padStart(2, '0');
+            const m = String(date.getMonth() + 1).padStart(2, '0');
+            const y = date.getFullYear();
+            const fileName = `kasu_backup(${d}-${m}-${y}).json`;
+            const b=new Blob([JSON.stringify(data)], {type:'application/json'}); 
+            const a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download=fileName; a.click(); 
+        }
         function importData(input) {
             const file = input.files[0];
             if (!file) return;
