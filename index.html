@@ -8,10 +8,9 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root {
-            /* Brand Colors derived from Logo (Cyan -> Purple) */
-            --primary: #8b5cf6;
-            --primary-grad: linear-gradient(135deg, #06b6d4 0%, #7c3aed 100%); 
-            
+            /* Palette */
+            --primary: #6366f1;
+            --primary-grad: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
             --bg: #f8fafc;
             --surface: #ffffff;
             --surface-glass: rgba(255, 255, 255, 0.95);
@@ -67,17 +66,9 @@
         #app-wrapper { display: none; height: 100%; overflow-y: auto; padding-bottom: 120px; padding-top: 10px; scroll-behavior: smooth; }
         .container { max-width: 500px; margin: 0 auto; padding: 20px; }
         
-        /* HEADER with LOGO */
-        header { margin-bottom: 25px; display: flex; align-items: center; justify-content: space-between; }
-        .brand-container { display: flex; align-items: center; gap: 12px; }
-        .app-logo { 
-            width: 45px; height: 45px; 
-            border-radius: 12px; 
-            object-fit: cover; 
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-        }
-        .greeting { font-size: 0.85rem; color: var(--text-muted); font-weight: 500; }
-        .brand { font-size: 1.6rem; font-weight: 800; background: var(--primary-grad); -webkit-background-clip: text; -webkit-text-fill-color: transparent; letter-spacing: -0.5px; }
+        header { margin-bottom: 20px; }
+        .greeting { font-size: 0.9rem; color: var(--text-muted); font-weight: 500; }
+        .brand { font-size: 1.6rem; font-weight: 800; background: var(--primary-grad); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
 
         /* --- COMPONENTS --- */
         .card { background: var(--surface); padding: 24px; border-radius: var(--radius); box-shadow: var(--shadow); margin-bottom: 20px; border: 1px solid var(--border); }
@@ -92,7 +83,7 @@
         .filter-container { overflow-x: auto; white-space: nowrap; padding-bottom: 10px; margin-bottom: 10px; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
         .filter-container::-webkit-scrollbar { display: none; }
         .filter-chip { display: inline-block; padding: 8px 16px; border-radius: 20px; background: var(--input-bg); color: var(--text-muted); font-size: 0.85rem; font-weight: 600; margin-right: 8px; cursor: pointer; border: 1px solid transparent; transition: 0.2s; }
-        .filter-chip.active { background: var(--primary); color: white; box-shadow: 0 4px 10px rgba(6, 182, 212, 0.3); }
+        .filter-chip.active { background: var(--primary); color: white; box-shadow: 0 4px 10px rgba(99, 102, 241, 0.3); }
         .date-range-box { display: none; gap: 10px; margin-bottom: 15px; animation: fadeIn 0.3s; }
         .date-range-box.show { display: flex; }
         .date-input { flex: 1; padding: 10px; border-radius: 12px; border: 1px solid var(--border); background: var(--surface); color: var(--text); font-family: 'Poppins'; }
@@ -104,7 +95,7 @@
         /* Buttons */
         .btn { width: 100%; padding: 18px; border: none; border-radius: 18px; font-weight: 600; font-size: 1rem; cursor: pointer; transition: 0.2s; display: flex; justify-content: center; align-items: center; gap: 8px; }
         .btn:active { transform: scale(0.98); }
-        .btn-primary { background: var(--primary-grad); color: white; box-shadow: 0 4px 15px rgba(124, 58, 237, 0.4); }
+        .btn-primary { background: var(--primary-grad); color: white; box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4); }
         .btn-ghost { background: transparent; color: var(--text-muted); width: auto; padding: 5px 10px; font-size: 0.9rem; }
         .btn-icon-only { width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: var(--input-bg); color: var(--text); border: none; cursor: pointer; transition: 0.2s; }
         .btn-icon-only:active { background: var(--primary); color: white; }
@@ -130,13 +121,27 @@
         .icon-box { width: 44px; height: 44px; border-radius: 14px; background: var(--input-bg); display: flex; align-items: center; justify-content: center; font-size: 1.2rem; margin-right: 15px; }
         .timestamp { font-size: 0.75rem; color: var(--text-muted); margin-top: 2px; }
 
+        /* Modal Overlay */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5); z-index: 2500; display: none;
+            align-items: center; justify-content: center; padding: 20px;
+            backdrop-filter: blur(5px);
+        }
+        .modal-card {
+            background: var(--surface); width: 100%; max-width: 400px;
+            border-radius: 24px; padding: 25px; box-shadow: 0 20px 50px rgba(0,0,0,0.2);
+            animation: slideUp 0.3s ease;
+        }
+        @keyframes slideUp { from { transform: translateY(50px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
         /* Navigation */
         .tab-bar { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); width: 85%; max-width: 400px; background: var(--surface-glass); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid var(--border); border-radius: 35px; display: flex; justify-content: space-around; padding: 15px 0; z-index: 100; box-shadow: 0 20px 40px rgba(0,0,0,0.1); }
         .tab-btn { background: none; border: none; color: var(--text-muted); cursor: pointer; transition: 0.3s; padding: 5px; }
         .tab-icon { font-size: 1.6rem; transition: 0.3s; display: block; }
         .tab-btn.active { color: var(--primary); }
         .tab-btn.active .tab-icon { transform: translateY(-5px); }
-        .tab-add-btn { background: var(--primary-grad); color: white; width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 2rem; box-shadow: 0 10px 25px rgba(124, 58, 237, 0.5); margin-top: -40px; border: 6px solid var(--bg); transition: 0.2s; }
+        .tab-add-btn { background: var(--primary-grad); color: white; width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 2rem; box-shadow: 0 10px 25px rgba(99, 102, 241, 0.5); margin-top: -40px; border: 6px solid var(--bg); transition: 0.2s; }
         .tab-add-btn:active { transform: scale(0.9); }
 
         /* Mode Toggle */
@@ -157,7 +162,7 @@
     <div id="toast-container"></div>
 
     <div id="auth-overlay">
-        <img src="1000027449.jpg" style="width:80px; height:80px; border-radius:20px; margin-bottom:20px; box-shadow:0 10px 30px rgba(0,0,0,0.2);">
+        <div style="font-size:3rem; margin-bottom:10px;">🔒</div>
         <h2 style="font-size:1.5rem;">Welcome Back</h2>
         <div class="pin-dots" id="pinDisplay"></div>
         <div class="numpad">
@@ -176,15 +181,44 @@
         </div>
     </div>
 
+    <div id="editWalletModal" class="modal-overlay">
+        <div class="modal-card">
+            <div class="flex-between" style="margin-bottom:20px;">
+                <h2 style="margin:0;">Manage Wallet</h2>
+                <button class="btn-icon-only" onclick="closeEditModal()">✕</button>
+            </div>
+            
+            <input type="hidden" id="editWalletOldName">
+            <label style="font-size:0.8rem; color:var(--text-muted);">Name</label>
+            <input type="text" id="editWalletName">
+
+            <div id="editLimitSection" style="display:none; background:var(--input-bg); padding:15px; border-radius:16px; margin-bottom:15px;">
+                <label style="font-size:0.8rem; color:var(--primary); font-weight:600;">Monthly Limit Settings</label>
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-top:10px;">
+                    <div>
+                        <label style="font-size:0.7rem; color:var(--text-muted);">Limit (₹)</label>
+                        <input type="number" id="editLimitAmount" style="margin:0; background:var(--surface);">
+                    </div>
+                    <div>
+                        <label style="font-size:0.7rem; color:var(--text-muted);">Reset Day</label>
+                        <input type="number" id="editLimitDay" min="1" max="28" style="margin:0; background:var(--surface);">
+                    </div>
+                </div>
+                <button class="btn" style="background:var(--primary); color:white; margin-top:15px; font-size:0.9rem;" onclick="resetLimitBalance()">🔄 Reset Balance to Limit Now</button>
+            </div>
+
+            <div style="display:flex; gap:10px; margin-top:10px;">
+                <button class="btn" style="flex:1; background:var(--primary); color:white;" onclick="saveWalletEdit()">Save Changes</button>
+            </div>
+        </div>
+    </div>
+
     <div id="app-wrapper">
         <div class="container">
-            <header>
-                <div class="brand-container">
-                    <img src="1000027449.jpg" class="app-logo" alt="Logo">
-                    <div>
-                        <div class="greeting" id="greeting">Hello</div>
-                        <div class="brand">KASU</div>
-                    </div>
+            <header class="flex-between">
+                <div>
+                    <div class="greeting" id="greeting">Hello</div>
+                    <div class="brand">KASU</div>
                 </div>
                 <button onclick="toggleTheme()" style="background:none; border:none; font-size:1.4rem; cursor:pointer; padding:5px;">🌗</button>
             </header>
@@ -457,7 +491,6 @@
             processRecurring();
             checkAccountResets();
             
-            // Set Default Date
             const now = new Date();
             now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
             document.getElementById('transDate').value = now.toISOString().slice(0,16);
@@ -473,7 +506,6 @@
                 if(!data.recurring) data.recurring = [];
                 if(!data.categoryIcons) data.categoryIcons = { "Groceries": "🛒" };
                 if(!data.accountMeta) data.accountMeta = {};
-                // Ensure migration if transactions lack date
                 data.transactions.forEach(t => { if(!t.date) t.date = t.id; }); 
             }
             if(localStorage.getItem('kasu_theme') === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
@@ -501,25 +533,83 @@
         // --- EMOJI PICKER ---
         function toggleEmojiPicker() {
             const picker = document.getElementById('emojiPicker');
-            if(picker.style.display === 'grid') {
-                picker.style.display = 'none';
-            } else {
+            if(picker.style.display === 'grid') { picker.style.display = 'none'; } else {
                 picker.innerHTML = '';
                 EMOJI_LIST.forEach(emoji => {
-                    const btn = document.createElement('button');
-                    btn.className = 'emoji-btn-item';
-                    btn.innerText = emoji;
-                    btn.onclick = () => selectNewEmoji(emoji);
-                    picker.appendChild(btn);
+                    const btn = document.createElement('button'); btn.className = 'emoji-btn-item';
+                    btn.innerText = emoji; btn.onclick = () => selectNewEmoji(emoji); picker.appendChild(btn);
                 });
                 picker.style.display = 'grid';
             }
         }
-
         function selectNewEmoji(emoji) {
-            selectedEmoji = emoji;
-            document.getElementById('emojiTrigger').innerText = emoji;
-            document.getElementById('emojiPicker').style.display = 'none';
+            selectedEmoji = emoji; document.getElementById('emojiTrigger').innerText = emoji; document.getElementById('emojiPicker').style.display = 'none';
+        }
+
+        // --- WALLET MANAGER MODAL ---
+        function openEditWallet(name) {
+            document.getElementById('editWalletOldName').value = name;
+            document.getElementById('editWalletName').value = name;
+            
+            const meta = data.accountMeta?.[name];
+            const limitSection = document.getElementById('editLimitSection');
+            
+            if(meta && meta.type === 'limit') {
+                limitSection.style.display = 'block';
+                document.getElementById('editLimitAmount').value = meta.limit;
+                document.getElementById('editLimitDay').value = meta.day;
+            } else {
+                limitSection.style.display = 'none';
+            }
+            
+            document.getElementById('editWalletModal').style.display = 'flex';
+        }
+
+        function closeEditModal() { document.getElementById('editWalletModal').style.display = 'none'; }
+
+        function saveWalletEdit() {
+            const oldName = document.getElementById('editWalletOldName').value;
+            const newName = document.getElementById('editWalletName').value.trim();
+            if(!newName) return;
+
+            // Update Limits if applicable
+            const meta = data.accountMeta?.[oldName];
+            if(meta && meta.type === 'limit') {
+                meta.limit = document.getElementById('editLimitAmount').value;
+                meta.day = document.getElementById('editLimitDay').value;
+            }
+
+            // Rename if changed
+            if(newName !== oldName) {
+                if(data.accounts[newName]) { showToast("Name exists", "error"); return; }
+                data.accounts[newName] = data.accounts[oldName];
+                delete data.accounts[oldName];
+                // Update Order
+                const idx = data.accountOrder.indexOf(oldName);
+                if(idx !== -1) data.accountOrder[idx] = newName;
+                // Update Transactions
+                data.transactions.forEach(t => { if(t.account === oldName) t.account = newName; });
+                // Update Meta key
+                if(data.accountMeta[oldName]) {
+                    data.accountMeta[newName] = data.accountMeta[oldName];
+                    delete data.accountMeta[oldName];
+                }
+            }
+            
+            saveData();
+            closeEditModal();
+            showToast("Wallet Updated", "success");
+        }
+
+        function resetLimitBalance() {
+            const name = document.getElementById('editWalletOldName').value;
+            const meta = data.accountMeta?.[name];
+            if(meta) {
+                data.accounts[name] = parseFloat(meta.limit);
+                meta.lastReset = Date.now();
+                saveData();
+                showToast("Balance Reset", "success");
+            }
         }
 
         // --- ACCOUNT LIMITS ---
@@ -605,8 +695,6 @@
             const now = new Date();
             const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
             let filtered = data.transactions;
-            
-            // Filter using the .date property if available, fallback to .id
             const getDate = (t) => t.date || t.id;
 
             if (currentFilter === 'today') filtered = filtered.filter(t => getDate(t) >= startOfDay);
@@ -628,9 +716,7 @@
             const list = document.getElementById('recentList'); list.innerHTML = "";
             if(filteredTx.length===0) { list.innerHTML = "<p style='text-align:center;color:var(--text-muted);padding:20px;'>No transactions found.</p>"; renderChart([]); return; }
 
-            // Sort by Date property
             filteredTx.sort((a,b) => (b.date || b.id) - (a.date || a.id));
-            
             let lastDate = "";
             filteredTx.forEach(t => {
                 const dateObj = new Date(t.date || t.id);
@@ -694,7 +780,7 @@
                                 ${limitInfo}
                             </div>
                         </div>
-                        <div><button class="btn-icon-only" style="display:inline-flex;" onclick="renameAcc('${k}')">✎</button><button class="btn-icon-only" style="display:inline-flex;color:var(--danger);" onclick="delAcc('${k}')">✕</button></div>
+                        <div><button class="btn-icon-only" style="display:inline-flex;" onclick="openEditWallet('${k}')">✎</button><button class="btn-icon-only" style="display:inline-flex;color:var(--danger);" onclick="delAcc('${k}')">✕</button></div>
                     </div>`;
                 selects.forEach(s => { if(s) s.innerHTML += `<option value="${k}">${k}</option>`; });
             });
@@ -766,11 +852,10 @@
             const amt = parseFloat(document.getElementById('amount').value);
             if(!amt) { showToast("Enter amount", "error"); return; }
             
-            // Get date from picker, default to now if empty
             const dateVal = document.getElementById('transDate').value;
             const dateObj = dateVal ? new Date(dateVal) : new Date();
             const ts = dateObj.getTime();
-            const createId = Date.now(); // Metadata stamp
+            const createId = Date.now();
 
             if(addMode === 'trans') {
                 const desc = document.getElementById('desc').value || 'Expense';
@@ -822,7 +907,6 @@
         }
 
         function delAcc(n) { if(confirm("Delete?")) { delete data.accounts[n]; data.accountOrder = data.accountOrder.filter(x=>x!==n); delete data.accountMeta[n]; saveData(); } }
-        function renameAcc(o) { const n=prompt("Rename:",o); if(n&&n!==o&&!data.accounts[n]) { data.accounts[n]=data.accounts[o]; delete data.accounts[o]; data.accountOrder[data.accountOrder.indexOf(o)] = n; data.transactions.forEach(t=>{if(t.account===o)t.account=n}); data.recurring.forEach(r=>{if(r.account===o)r.account=n}); if(data.accountMeta[o]) { data.accountMeta[n]=data.accountMeta[o]; delete data.accountMeta[o]; } saveData(); } }
         
         function addCategory() { 
             const n=document.getElementById('newCatInput').value; const icon=selectedEmoji; 
