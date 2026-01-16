@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>KASU V16 (Biometrics)</title>
+    <title>Kasu V17</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
@@ -62,8 +62,12 @@
         .num-btn { width: 70px; height: 70px; border-radius: 50%; border: none; background: var(--surface); color: var(--text); font-size: 1.5rem; font-weight: 500; box-shadow: var(--shadow); cursor: pointer; transition: 0.1s; }
         .num-btn:active { transform: scale(0.95); background: var(--input-bg); }
         
-        /* Biometric Button */
-        #bioBtn { grid-column: 1 / -1; width: 100%; border-radius: 20px; background: var(--primary-grad); color: white; display: none; align-items: center; justify-content: center; gap: 10px; }
+        #bioBtn { 
+            grid-column: 1 / -1; width: 100%; border-radius: 20px; 
+            background: var(--primary-grad); color: white; 
+            display: none; align-items: center; justify-content: center; gap: 10px;
+            font-size: 1rem;
+        }
 
         /* --- LAYOUT --- */
         #app-wrapper { display: none; height: 100%; overflow-y: auto; padding-bottom: 120px; padding-top: 10px; scroll-behavior: smooth; }
@@ -100,7 +104,7 @@
         /* Buttons */
         .btn { width: 100%; padding: 18px; border: none; border-radius: 18px; font-weight: 600; font-size: 1rem; cursor: pointer; transition: 0.2s; display: flex; justify-content: center; align-items: center; gap: 8px; }
         .btn:active { transform: scale(0.98); }
-        .btn-primary { background: var(--primary-grad); color: white; box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4); }
+        .btn-primary { background: var(--primary-grad); color: white; box-shadow: 0 4px 15px rgba(124, 58, 237, 0.4); }
         .btn-ghost { background: transparent; color: var(--text-muted); width: auto; padding: 5px 10px; font-size: 0.9rem; }
         .btn-icon-only { width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: var(--input-bg); color: var(--text); border: none; cursor: pointer; transition: 0.2s; }
         .btn-icon-only:active { background: var(--primary); color: white; }
@@ -168,7 +172,7 @@
 
     <div id="auth-overlay">
         <img src="1000027449.jpg" style="width:80px; height:80px; border-radius:20px; margin-bottom:20px; box-shadow:0 10px 30px rgba(0,0,0,0.2);" onerror="this.style.display='none'">
-        <h2 style="font-size:1.5rem;">KASU Locked</h2>
+        <h2 style="font-size:1.5rem;">Kasu Locked</h2>
         <div class="pin-dots" id="pinDisplay"></div>
         <div class="numpad">
             <button class="num-btn" onclick="inputPin(1)">1</button>
@@ -184,7 +188,7 @@
             <button class="num-btn" onclick="inputPin(0)">0</button>
             <button class="num-btn" onclick="submitPin()" style="background:var(--primary); color:white;">→</button>
             
-            <button id="bioBtn" class="num-btn" onclick="verifyBiometric()">🆔</button>
+            <button id="bioBtn" class="num-btn" onclick="verifyLocalBiometric()">🆔 Quick Unlock</button>
         </div>
     </div>
 
@@ -420,10 +424,15 @@
                 <div class="card">
                     <h2>Security</h2>
                     <div style="display:flex; justify-content:space-between; align-items:center; background:var(--input-bg); padding:15px; border-radius:16px;">
-                        <span>🆔 Enable Biometric (Face/Touch)</span>
-                        <button class="btn" style="width:auto; padding:8px 16px;" onclick="enableBiometrics()">Enable</button>
+                        <div>
+                            <strong>Enable Quick/Biometric Unlock</strong>
+                            <div style="font-size:0.7rem; color:var(--text-muted);">Skips PIN (Device Local)</div>
+                        </div>
+                        <label class="switch">
+                            <input type="checkbox" id="bioToggle" onchange="toggleLocalBio()">
+                            <span style="font-size:1.5rem;">🔘</span>
+                        </label>
                     </div>
-                    <p style="font-size:0.7rem; color:var(--text-muted); margin-top:5px;">Requires HTTPS / GitHub Pages.</p>
                 </div>
 
                 <div class="card">
@@ -489,7 +498,7 @@
         let addMode = 'trans';
         let currentFilter = 'all';
         let selectedEmoji = "😀";
-        let isBiometricActive = localStorage.getItem('kasu_bio_active') === 'true';
+        let localBioActive = localStorage.getItem('kasu_local_bio') === 'true';
 
         // --- AUTH ---
         function inputPin(n) { if(currentPin.length<4) { currentPin+=n; updatePinUI(); } }
@@ -517,46 +526,24 @@
             document.getElementById('transDate').value = now.toISOString().slice(0,16);
         }
 
-        // --- BIOMETRICS ---
-        if(isBiometricActive) document.getElementById('bioBtn').style.display = 'flex';
+        // --- LOCAL BIO SIMULATION ---
+        if(localBioActive) document.getElementById('bioBtn').style.display = 'flex';
+        document.getElementById('bioToggle').checked = localBioActive;
 
-        async function enableBiometrics() {
-            if (!window.PublicKeyCredential) { showToast("Not supported on this device/browser.", "error"); return; }
-            try {
-                // Dummy create to trigger permission/enrollment
-                const challenge = new Uint8Array(32);
-                window.crypto.getRandomValues(challenge);
-                await navigator.credentials.create({
-                    publicKey: {
-                        challenge: challenge,
-                        rp: { name: "KASU Financial" },
-                        user: { id: new Uint8Array(16), name: "user", displayName: "User" },
-                        pubKeyCredParams: [{ alg: -7, type: "public-key" }],
-                        authenticatorSelection: { authenticatorAttachment: "platform" },
-                        timeout: 60000,
-                        attestation: "direct"
-                    }
-                });
-                localStorage.setItem('kasu_bio_active', 'true');
-                showToast("Biometrics Enabled!", "success");
-                document.getElementById('bioBtn').style.display = 'flex';
-            } catch (e) {
-                console.error(e);
-                showToast("Setup failed or cancelled.", "error");
-            }
+        function toggleLocalBio() {
+            localBioActive = !localBioActive;
+            localStorage.setItem('kasu_local_bio', localBioActive);
+            document.getElementById('bioBtn').style.display = localBioActive ? 'flex' : 'none';
+            showToast(localBioActive ? "Quick Unlock Enabled" : "Quick Unlock Disabled", "info");
         }
 
-        async function verifyBiometric() {
-            try {
-                const challenge = new Uint8Array(32);
-                window.crypto.getRandomValues(challenge);
-                await navigator.credentials.get({
-                    publicKey: { challenge: challenge }
-                });
-                unlock(); // If get() succeeds, user passed verification
-            } catch (e) {
-                showToast("Verification failed.", "error");
-            }
+        function verifyLocalBiometric() {
+            // Simulated local check (visual only as requested for local storage compat)
+            document.getElementById('bioBtn').innerText = "Scanning...";
+            setTimeout(() => {
+                unlock();
+                document.getElementById('bioBtn').innerText = "🆔 Quick Unlock";
+            }, 600);
         }
 
         // --- CORE ---
@@ -884,11 +871,10 @@
             const amt = parseFloat(document.getElementById('amount').value);
             if(!amt) { showToast("Enter amount", "error"); return; }
             
-            // Get date from picker, default to now if empty
             const dateVal = document.getElementById('transDate').value;
             const dateObj = dateVal ? new Date(dateVal) : new Date();
             const ts = dateObj.getTime();
-            const createId = Date.now(); // Metadata stamp
+            const createId = Date.now();
 
             if(addMode === 'trans') {
                 const desc = document.getElementById('desc').value || 'Expense';
@@ -940,6 +926,7 @@
         }
 
         function delAcc(n) { if(confirm("Delete?")) { delete data.accounts[n]; data.accountOrder = data.accountOrder.filter(x=>x!==n); delete data.accountMeta[n]; saveData(); } }
+        function renameAcc(o) { const n=prompt("Rename:",o); if(n&&n!==o&&!data.accounts[n]) { data.accounts[n]=data.accounts[o]; delete data.accounts[o]; data.accountOrder[data.accountOrder.indexOf(o)] = n; data.transactions.forEach(t=>{if(t.account===o)t.account=n}); data.recurring.forEach(r=>{if(r.account===o)r.account=n}); if(data.accountMeta[o]) { data.accountMeta[n]=data.accountMeta[o]; delete data.accountMeta[o]; } saveData(); } }
         
         function addCategory() { 
             const n=document.getElementById('newCatInput').value; const icon=selectedEmoji; 
@@ -983,7 +970,6 @@
         function switchTab(t) { document.querySelectorAll('.view').forEach(e => e.style.display='none'); document.querySelectorAll('.tab-btn').forEach(e => e.classList.remove('active')); document.getElementById(`tab-${t}`).style.display='block'; if(t!=='add') document.getElementById(`btn-${t}`).classList.add('active'); renderAll(); }
         function toggleTheme() { const c = document.documentElement.getAttribute('data-theme'); const n = c==='dark'?'light':'dark'; document.documentElement.setAttribute('data-theme', n); localStorage.setItem('kasu_theme', n); renderChart(); }
         
-        // --- NEW EXPORT LOGIC WITH TIME ---
         function exportCSV() { 
             let csv = "Date,Desc,Cat,Type,Amt,Acc\n"; 
             data.transactions.forEach(t => { csv += `${new Date(t.date||t.id).toLocaleDateString()},${t.desc},${t.category},${t.type},${t.amount},${t.account}\n`; }); 
@@ -1008,7 +994,6 @@
             const b=new Blob([JSON.stringify(data)], {type:'application/json'}); 
             const a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download=fileName; a.click(); 
         }
-        
         function importData(input) {
             const file = input.files[0];
             if (!file) return;
@@ -1044,4 +1029,3 @@
     </script>
 </body>
 </html>
-
