@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>KASU V18 (Smart Analytics)</title>
+    <title>KASU V19</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
@@ -83,16 +83,45 @@
         .card { background: var(--surface); padding: 24px; border-radius: var(--radius); box-shadow: var(--shadow); margin-bottom: 20px; border: 1px solid var(--border); }
 
         /* Hero */
-        .hero-section { text-align: center; padding: 10px 0 20px 0; animation: fadeIn 0.5s ease; }
+        .hero-section { text-align: center; padding: 10px 0 10px 0; animation: fadeIn 0.5s ease; }
         .hero-label { font-size: 0.85rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 5px; }
         .hero-balance { font-size: 3.2rem; font-weight: 800; color: var(--text); letter-spacing: -1.5px; line-height: 1; }
         .hero-currency { font-size: 1.8rem; color: var(--text-muted); vertical-align: super; margin-right: 4px; }
+
+        /* Account Scroller (New) */
+        .account-scroller {
+            display: flex;
+            overflow-x: auto;
+            gap: 12px;
+            padding: 0 5px 15px 5px;
+            margin-bottom: 10px;
+            scrollbar-width: none;
+            -webkit-overflow-scrolling: touch;
+        }
+        .account-scroller::-webkit-scrollbar { display: none; }
+        .acc-card {
+            min-width: 110px;
+            background: var(--surface);
+            padding: 12px;
+            border-radius: 18px;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border);
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            text-align: left;
+            transition: 0.2s;
+        }
+        .acc-card:active { transform: scale(0.98); }
+        .acc-card-name { font-size: 0.75rem; color: var(--text-muted); font-weight: 500; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .acc-card-bal { font-size: 0.95rem; font-weight: 700; color: var(--text); }
 
         /* Filters */
         .filter-container { overflow-x: auto; white-space: nowrap; padding-bottom: 10px; margin-bottom: 10px; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
         .filter-container::-webkit-scrollbar { display: none; }
         .filter-chip { display: inline-block; padding: 8px 16px; border-radius: 20px; background: var(--input-bg); color: var(--text-muted); font-size: 0.85rem; font-weight: 600; margin-right: 8px; cursor: pointer; border: 1px solid transparent; transition: 0.2s; }
-        .filter-chip.active { background: var(--primary); color: white; box-shadow: 0 4px 10px rgba(99, 102, 241, 0.3); }
+        .filter-chip.active { background: var(--primary); color: white; box-shadow: 0 4px 10px rgba(6, 182, 212, 0.3); }
         .date-range-box { display: none; gap: 10px; margin-bottom: 15px; animation: fadeIn 0.3s; }
         .date-range-box.show { display: flex; }
         .date-input { flex: 1; padding: 10px; border-radius: 12px; border: 1px solid var(--border); background: var(--surface); color: var(--text); font-family: 'Poppins'; }
@@ -242,6 +271,8 @@
                     <div class="hero-label">Total Net Worth</div>
                     <div class="hero-balance"><span class="hero-currency">₹</span><span id="totalBalance">0.00</span></div>
                 </div>
+
+                <div id="accountScroller" class="account-scroller"></div>
 
                 <div class="filter-container">
                     <div class="filter-chip active" onclick="applyFilter(this, 'all')">All</div>
@@ -747,6 +778,10 @@
         function renderHome() {
             const total = Object.values(data.accounts).reduce((a,b)=>a+b,0);
             document.getElementById('totalBalance').innerText = total.toLocaleString('en-IN', {minimumFractionDigits: 2});
+            
+            // New Account Scroller Renderer
+            renderAccountScroller();
+
             const filteredTx = getFilteredTransactions();
             const list = document.getElementById('recentList'); list.innerHTML = "";
             if(filteredTx.length===0) { list.innerHTML = "<p style='text-align:center;color:var(--text-muted);padding:20px;'>No transactions found.</p>"; renderChart([]); return; }
@@ -774,6 +809,22 @@
                 list.innerHTML += `<div class="list-item"><div style="display:flex; align-items:center;"><div class="icon-box" style="font-size:1rem;">${t.type==='transfer'?icon:catIcon}</div><div><div style="font-weight:600; font-size:0.95rem;">${t.desc}</div><div class="timestamp">${timeStr} • ${t.category}</div></div></div><div style="text-align:right;"><div style="font-weight:600; color:${color};">${sign}₹${t.amount}</div><button onclick="delTrans(${t.id})" style="border:none;background:none;color:var(--text-muted);opacity:0.5;padding:5px;">🗑</button></div></div>`;
             });
             renderChart(filteredTx);
+        }
+
+        // --- NEW SCROLLER FUNCTION ---
+        function renderAccountScroller() {
+            const container = document.getElementById('accountScroller');
+            container.innerHTML = "";
+            data.accountOrder.forEach(k => {
+                if(!data.accounts.hasOwnProperty(k)) return;
+                const v = data.accounts[k];
+                container.innerHTML += `
+                    <div class="acc-card">
+                        <div class="acc-card-name">${k}</div>
+                        <div class="acc-card-bal">₹${v.toLocaleString('en-IN')}</div>
+                    </div>
+                `;
+            });
         }
 
         function renderChart(txList) {
@@ -887,7 +938,6 @@
             const amt = parseFloat(document.getElementById('amount').value);
             if(!amt) { showToast("Enter amount", "error"); return; }
             
-            // Get date from picker, default to now if empty
             const dateVal = document.getElementById('transDate').value;
             const dateObj = dateVal ? new Date(dateVal) : new Date();
             const ts = dateObj.getTime();
@@ -1045,4 +1095,3 @@
     </script>
 </body>
 </html>
-
