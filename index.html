@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Kasu V17</title>
+    <title>KASU V18 (Smart Analytics)</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
@@ -257,7 +257,10 @@
                 </div>
                 
                 <div class="card">
-                    <div class="flex-between"><h3 style="margin:0; color:var(--text);">Analytics</h3></div>
+                    <div class="flex-between">
+                        <h3 style="margin:0; color:var(--text);">Analytics</h3>
+                        <span id="chartLabel" style="font-size:0.7rem; color:var(--text-muted);">All Time</span>
+                    </div>
                     <div style="height: 200px; position: relative; margin-top:20px;">
                         <canvas id="expenseChart"></canvas>
                     </div>
@@ -538,7 +541,6 @@
         }
 
         function verifyLocalBiometric() {
-            // Simulated local check (visual only as requested for local storage compat)
             document.getElementById('bioBtn').innerText = "Scanning...";
             setTimeout(() => {
                 unlock();
@@ -695,7 +697,7 @@
             else if (manual) { showToast("Nothing due today", "success"); }
         }
 
-        // --- FILTER ---
+        // --- FILTER & CHART UPDATED ---
         function applyFilter(el, type) {
             currentFilter = type;
             document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
@@ -716,13 +718,27 @@
             let filtered = data.transactions;
             const getDate = (t) => t.date || t.id;
 
-            if (currentFilter === 'today') filtered = filtered.filter(t => getDate(t) >= startOfDay);
-            else if (currentFilter === 'month') filtered = filtered.filter(t => getDate(t) >= now.getTime() - (30 * 86400000));
-            else if (currentFilter === 'year') filtered = filtered.filter(t => getDate(t) >= now.getTime() - (365 * 86400000));
-            else if (currentFilter === 'custom') {
+            if (currentFilter === 'today') {
+                filtered = filtered.filter(t => getDate(t) >= startOfDay);
+                document.getElementById('chartLabel').innerText = "Today";
+            } else if (currentFilter === 'month') {
+                const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+                filtered = filtered.filter(t => getDate(t) >= startOfMonth);
+                document.getElementById('chartLabel').innerText = "This Month";
+            } else if (currentFilter === 'year') {
+                const startOfYear = new Date(now.getFullYear(), 0, 1).getTime();
+                filtered = filtered.filter(t => getDate(t) >= startOfYear);
+                document.getElementById('chartLabel').innerText = "This Year";
+            } else if (currentFilter === 'all') {
+                document.getElementById('chartLabel').innerText = "All Time";
+            } else if (currentFilter === 'custom') {
                 const s = document.getElementById('startDate').valueAsDate;
                 const e = document.getElementById('endDate').valueAsDate;
-                if(s && e) { e.setHours(23, 59, 59, 999); filtered = filtered.filter(t => getDate(t) >= s.getTime() && getDate(t) <= e.getTime()); }
+                if(s && e) { 
+                    e.setHours(23, 59, 59, 999); 
+                    filtered = filtered.filter(t => getDate(t) >= s.getTime() && getDate(t) <= e.getTime()); 
+                    document.getElementById('chartLabel').innerText = "Custom Range";
+                }
             }
             return filtered;
         }
@@ -871,6 +887,7 @@
             const amt = parseFloat(document.getElementById('amount').value);
             if(!amt) { showToast("Enter amount", "error"); return; }
             
+            // Get date from picker, default to now if empty
             const dateVal = document.getElementById('transDate').value;
             const dateObj = dateVal ? new Date(dateVal) : new Date();
             const ts = dateObj.getTime();
@@ -926,7 +943,6 @@
         }
 
         function delAcc(n) { if(confirm("Delete?")) { delete data.accounts[n]; data.accountOrder = data.accountOrder.filter(x=>x!==n); delete data.accountMeta[n]; saveData(); } }
-        function renameAcc(o) { const n=prompt("Rename:",o); if(n&&n!==o&&!data.accounts[n]) { data.accounts[n]=data.accounts[o]; delete data.accounts[o]; data.accountOrder[data.accountOrder.indexOf(o)] = n; data.transactions.forEach(t=>{if(t.account===o)t.account=n}); data.recurring.forEach(r=>{if(r.account===o)r.account=n}); if(data.accountMeta[o]) { data.accountMeta[n]=data.accountMeta[o]; delete data.accountMeta[o]; } saveData(); } }
         
         function addCategory() { 
             const n=document.getElementById('newCatInput').value; const icon=selectedEmoji; 
@@ -1029,3 +1045,4 @@
     </script>
 </body>
 </html>
+
