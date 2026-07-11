@@ -1,31 +1,25 @@
-
 "use client";
 
-import { useState } from "react";
+import { useStore } from "../store/useStore";
 
 export default function WorkspaceSelector() {
-  const [activeAccount, setActiveAccount] = useState("My Personal Account");
-  const [accountType, setAccountType] = useState("PERSONAL");
+  // Pull the current state and the update function from our global store
+  const currentEnvironment = useStore((state) => state.currentEnvironment);
+  const setEnvironment = useStore((state) => state.setEnvironment);
 
   return (
-    <div style={{ padding: "1rem", border: "1px solid #2a2a2a", borderRadius: "8px", backgroundColor: "#1e1e1e", maxWidth: "300px" }}>
-      <label style={{ fontSize: "0.8rem", color: "#888", display: "block", marginBottom: "0.5rem" }}>
-        Active Workspace ({accountType})
+    <div style={{ padding: "1rem", border: "1px solid #2a2a2a", borderRadius: "8px", backgroundColor: "#1e1e1e", minWidth: "250px" }}>
+      <label style={{ fontSize: "0.8rem", color: "#888", display: "block", marginBottom: "0.5rem", textTransform: "uppercase", letterSpacing: "1px" }}>
+        Isolated Environment
       </label>
       <select 
-        value={activeAccount} 
-        onChange={(e) => {
-          setActiveAccount(e.target.value);
-          // Simple conditional simulation for account types
-          if(e.target.value === "Math Club Fund") setAccountType("SCHOOL");
-          else if(e.target.value === "Weekend Stall") setAccountType("COMMERCIAL");
-          else setAccountType("PERSONAL");
-        }}
-        style={{ width: "100%", padding: "0.5rem", borderRadius: "4px", backgroundColor: "#121212", color: "#fff", border: "1px solid #444" }}
+        value={currentEnvironment} 
+        onChange={(e) => setEnvironment(e.target.value)}
+        style={{ width: "100%", padding: "0.8rem", borderRadius: "8px", backgroundColor: "#121212", color: "#fff", border: "1px solid #444", fontSize: "1rem" }}
       >
-        <option value="My Personal Account">👤 My Personal Account</option>
-        <option value="Weekend Stall">🏪 Weekend Stall</option>
-        <option value="Math Club Fund">🏫 Math Club Fund</option>
+        <option value="main">👤 Main (Personal)</option>
+        <option value="stall">🏪 Stall (Commercial)</option>
+        <option value="school">🏫 School (Fund)</option>
       </select>
     </div>
   );
