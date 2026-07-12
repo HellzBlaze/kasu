@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
+import "./globals.css"; // Imports your V19 styles!
+import BottomNav from "../components/BottomNav";
 
 export const metadata: Metadata = {
   title: "Kasu Next-Gen",
-  description: "Next-generation personal and commercial asset tracker",
+  description: "Next-generation asset tracker",
 };
 
 export default function RootLayout({
@@ -12,8 +14,11 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body style={{ margin: 0, backgroundColor: "#121212", color: "#ffffff", fontFamily: "sans-serif" }}>
-        {children}
+      <body>
+        <div className="container">
+          {children}
+        </div>
+        <BottomNav />
       </body>
     </html>
   );
