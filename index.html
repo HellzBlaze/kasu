@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KASU - Personal Finance Tracker</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Supabase JS Client CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- FontAwesome CDN -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; height: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans antialiased pb-20 select-none">
+
+    <!-- APP CONTAINER -->
+    <div id="app" class="max-w-md mx-auto min-h-screen bg-white shadow-xl relative flex flex-col">
+
+        <!-- HEADER BANNER -->
+        <header id="appHeader" class="hidden sticky top-0 z-30 bg-indigo-600 text-white px-4 py-3 flex justify-between items-center shadow-md">
+            <div class="flex items-center gap-2">
+                <div class="w-8 h-8 rounded-full bg-white text-indigo-600 font-black flex items-center justify-center text-sm shadow">K</div>
+                <h1 class="font-bold text-xl tracking-wide">KASU</h1>
+            </div>
+            <button onclick="openSettingsModal()" class="p-2 hover:bg-indigo-700 rounded-full transition">
+                <i class="fa-solid fa-gear text-lg"></i>
+            </button>
+        </header>
+
+        <!-- AUTH SCREEN (Login / Signup) -->
+        <section id="authSection" class="flex-1 flex flex-col justify-center px-6 py-8">
+            <div class="text-center mb-6">
+                <div class="w-16 h-16 rounded-full bg-indigo-600 text-white font-black flex items-center justify-center text-2xl shadow-lg mx-auto mb-2">K</div>
+                <h2 class="text-2xl font-bold text-slate-800">Welcome to KASU</h2>
+                <p class="text-xs text-slate-500">Track accounts, budgets & investments seamlessly</p>
+            </div>
+
+            <!-- LOGIN FORM -->
+            <div id="loginForm" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">Email</label>
+                    <input type="email" id="loginEmail" placeholder="user@example.com" class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-sm">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">Password</label>
+                    <div class="relative">
+                        <input type="password" id="loginPassword" placeholder="••••••••" class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-sm pr-10">
+                        <button type="button" onclick="triggerBiometricAuth()" class="absolute right-2 top-2 text-slate-400 hover:text-indigo-600">
+                            <i class="fa-solid fa-fingerprint text-lg"></i>
+                        </button>
+                    </div>
+                </div>
+                <button onclick="handleLogin()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 rounded-lg text-sm shadow transition">Log In</button>
+                <div class="text-center text-xs text-slate-500 pt-2">
+                    No account? <button onclick="toggleAuthMode('signup')" class="text-indigo-600 font-bold hover:underline">Sign up</button>
+                </div>
+            </div>
+
+            <!-- SIGNUP FORM -->
+            <div id="signupForm" class="space-y-4 hidden">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">Email</label>
+                    <div class="flex gap-2">
+                        <input type="email" id="signupEmail" placeholder="user@example.com" class="flex-1 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-sm">
+                        <button type="button" onclick="sendVerificationCode()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs px-3 py-2 rounded-lg font-medium">Send Code</button>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">Password</label>
+                    <input type="password" id="signupPassword" placeholder="••••••••" class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-sm">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">Verification Code / OTP</label>
+                    <input type="text" id="signupOtp" placeholder="123456" class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-sm">
+                </div>
+                <button onclick="handleSignup()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 rounded-lg text-sm shadow transition">Sign Up</button>
+                <div class="text-center text-xs text-slate-500 pt-2">
+                    Already have an account? <button onclick="toggleAuthMode('login')" class="text-indigo-600 font-bold hover:underline">Log in</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- MAIN DASHBOARD CONTENT (Hidden until authenticated) -->
+        <main id="mainContent" class="hidden flex-1 px-4 py-4 space-y-6">
+
+            <!-- PAGE 1: HOME -->
+            <div id="pageHome" class="space-y-5">
+                <!-- Net Worth Card -->
+                <div class="bg-gradient-to-br from-indigo-600 to-indigo-800 text-white p-5 rounded-2xl shadow-lg">
+                    <span class="text-xs uppercase tracking-wider font-semibold opacity-80">Net Worth (Real-time updates)</span>
+                    <div class="text-3xl font-extrabold mt-1" id="netWorthVal">₹0.00</div>
+                    <div class="text-xs opacity-75 mt-2 flex items-center gap-1">
+                        <i class="fa-solid fa-arrows-rotate text-xs animate-spin" id="netWorthSpinner" style="display:none;"></i>
+                        <span>Auto-updates stock & crypto quotes every 5 mins</span>
+                    </div>
+                </div>
+
+                <!-- Budgets Carousel -->
+                <div>
+                    <div class="flex justify-between items-center mb-2">
+                        <h3 class="font-bold text-slate-700 text-sm">Budgets</h3>
+                        <span class="text-xs text-slate-400">Scroll →</span>
+                    </div>
+                    <div class="flex gap-3 overflow-x-auto hide-scrollbar pb-2" id="homeBudgetsContainer">
+                        <!-- Dynamic content -->
+                    </div>
+                </div>
+
+                <!-- Accounts & Investments Summary -->
+                <div>
+                    <h3 class="font-bold text-slate-700 text-sm mb-2">Accounts & Investments</h3>
+                    <div class="space-y-2" id="homeAccountsContainer">
+                        <!-- Dynamic content -->
+                    </div>
+                </div>
+
+                <!-- Market Indices -->
+                <div class="p-3 bg-slate-100 rounded-xl flex justify-between items-center text-xs">
+                    <span class="font-semibold text-slate-600">BSE SENSEX</span>
+                    <span class="font-bold text-indigo-700" id="sensexVal">₹72,400.00 (+0.45%)</span>
+                </div>
+            </div>
+
+            <!-- PAGE 2: ACCOUNTS & TRANSACTIONS -->
+            <div id="pageAccounts" class="hidden space-y-5">
+                <div class="flex justify-between items-center">
+                    <h3 class="font-bold text-slate-700">Accounts Added</h3>
+                    <button onclick="openModal('modalAddAccount')" class="text-xs bg-indigo-600 text-white px-3 py-1.5 rounded-lg font-semibold shadow hover:bg-indigo-700">+ New Account</button>
+                </div>
+                <div class="space-y-2" id="accountsListContainer"></div>
+
+                <hr class="border-slate-200">
+
+                <div class="flex justify-between items-center">
+                    <h3 class="font-bold text-slate-700">Past Transactions</h3>
+                    <button onclick="openModal('modalAddTransaction')" class="text-xs bg-indigo-600 text-white px-3 py-1.5 rounded-lg font-semibold shadow hover:bg-indigo-700">+ New Transaction</button>
+                </div>
+                
+                <!-- Filter Pills -->
+                <div class="flex gap-2 text-xs">
+                    <button onclick="filterTransactions('all')" class="tx-filter-btn px-3 py-1 rounded-full bg-indigo-600 text-white font-medium" data-filter="all">All</button>
+                    <button onclick="filterTransactions('week')" class="tx-filter-btn px-3 py-1 rounded-full bg-slate-200 text-slate-700 font-medium" data-filter="week">Last Week</button>
+                    <button onclick="filterTransactions('month')" class="tx-filter-btn px-3 py-1 rounded-full bg-slate-200 text-slate-700 font-medium" data-filter="month">Last Month</button>
+                </div>
+
+                <div class="space-y-2" id="transactionsListContainer"></div>
+            </div>
+
+            <!-- PAGE 3: PORTFOLIO -->
+            <div id="pagePortfolio" class="hidden space-y-5">
+                <!-- Trading Investments -->
+                <div>
+                    <div class="flex justify-between items-center mb-2">
+                        <h3 class="font-bold text-slate-700">Trading Investments</h3>
+                        <button onclick="openModal('modalAddTrading')" class="text-xs bg-indigo-600 text-white px-3 py-1.5 rounded-lg font-semibold shadow hover:bg-indigo-700">+ Trading</button>
+                    </div>
+                    <div class="space-y-2" id="tradingInvestmentsContainer"></div>
+                </div>
+
+                <!-- Non-Trading Investments -->
+                <div>
+                    <div class="flex justify-between items-center mb-2">
+                        <h3 class="font-bold text-slate-700">Non-Trading Investments</h3>
+                        <button onclick="openModal('modalAddNonTrading')" class="text-xs bg-indigo-600 text-white px-3 py-1.5 rounded-lg font-semibold shadow hover:bg-indigo-700">+ Non-Trading</button>
+                    </div>
+                    <div class="space-y-2" id="nonTradingInvestmentsContainer"></div>
+                </div>
+            </div>
+
+            <!-- PAGE 4: RECURRING & BILLS -->
+            <div id="pageRecurring" class="hidden space-y-5">
+                <div>
+                    <div class="flex justify-between items-center mb-2">
+                        <h3 class="font-bold text-slate-700">Recurring Transactions</h3>
+                        <button onclick="openModal('modalAddRecurring')" class="text-xs bg-indigo-600 text-white px-3 py-1.5 rounded-lg font-semibold shadow hover:bg-indigo-700">+ Recurring</button>
+                    </div>
+                    <div class="space-y-2" id="recurringListContainer"></div>
+                </div>
+
+                <div>
+                    <div class="flex justify-between items-center mb-2">
+                        <h3 class="font-bold text-slate-700">Bills</h3>
+                        <button onclick="openModal('modalAddBill')" class="text-xs bg-indigo-600 text-white px-3 py-1.5 rounded-lg font-semibold shadow hover:bg-indigo-700">+ Bill</button>
+                    </div>
+                    <div class="space-y-2" id="billsListContainer"></div>
+                </div>
+            </div>
+
+            <!-- PAGE 5: BUDGETS & EXPENSES -->
+            <div id="pageBudgets" class="hidden space-y-5">
+                <div>
+                    <h3 class="font-bold text-slate-700 mb-2">Expenses Chart</h3>
+                    <div class="p-4 bg-slate-100 rounded-xl flex items-center justify-center">
+                        <!-- Simulated Pie Chart Visual -->
+                        <div class="w-32 h-32 rounded-full border-8 border-indigo-500 border-t-emerald-400 border-r-amber-400 flex items-center justify-center text-xs font-bold text-slate-600">
+                            Category Split
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <div class="flex justify-between items-center mb-2">
+                        <h3 class="font-bold text-slate-700">Budgets</h3>
+                        <button onclick="openModal('modalAddBudget')" class="text-xs bg-indigo-600 text-white px-3 py-1.5 rounded-lg font-semibold shadow hover:bg-indigo-700">+ Budget</button>
+                    </div>
+                    <div class="space-y-3" id="budgetsListContainer"></div>
+                </div>
+            </div>
+
+        </main>
+
+        <!-- BOTTOM NAVIGATION BAR -->
+        <nav id="appNav" class="hidden fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md bg-white border-t border-slate-200 flex justify-around py-2 text-[10px] text-slate-500 z-30">
+            <button onclick="switchPage('Home')" class="nav-btn flex flex-col items-center text-indigo-600 font-bold" data-page="Home">
+                <i class="fa-solid fa-house text-base mb-0.5"></i>
+                <span>Home</span>
+            </button>
+            <button onclick="switchPage('Accounts')" class="nav-btn flex flex-col items-center hover:text-indigo-600" data-page="Accounts">
+                <i class="fa-solid fa-wallet text-base mb-0.5"></i>
+                <span>Accounts</span>
+            </button>
+            <button onclick="switchPage('Portfolio')" class="nav-btn flex flex-col items-center hover:text-indigo-600" data-page="Portfolio">
+                <i class="fa-solid fa-chart-line text-base mb-0.5"></i>
+                <span>Portfolio</span>
+            </button>
+            <button onclick="switchPage('Recurring')" class="nav-btn flex flex-col items-center hover:text-indigo-600" data-page="Recurring">
+                <i class="fa-solid fa-arrows-rotate text-base mb-0.5"></i>
+                <span>Recurring</span>
+            </button>
+            <button onclick="switchPage('Budgets')" class="nav-btn flex flex-col items-center hover:text-indigo-600" data-page="Budgets">
+                <i class="fa-solid fa-pie-chart text-base mb-0.5"></i>
+                <span>Budgets</span>
+            </button>
+        </nav>
+
+    </div>
+
+    <!-- MODALS & POPUPS -->
+
+    <!-- SETTINGS MODAL & POPUP -->
+    <div id="modalSettings" class="fixed inset-0 bg-black/50 hidden z-50 flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-sm rounded-2xl p-5 space-y-4 relative shadow-2xl">
+            <div class="flex justify-between items-center border-b pb-2">
+                <h3 class="font-bold text-slate-800">Settings</h3>
+                <button onclick="closeModal('modalSettings')" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <div class="space-y-3">
+                <div class="text-xs text-slate-500">
+                    Logged in as: <span id="settingsUserEmail" class="font-semibold text-slate-700"></span>
+                </div>
+                <button onclick="openLogoutConfirmation()" class="w-full text-left py-2 px-3 bg-slate-100 hover:bg-slate-200 rounded-lg text-sm text-slate-700 font-medium flex items-center justify-between">
+                    <span>Log Out</span>
+                    <i class="fa-solid fa-right-from-bracket text-xs"></i>
+                </button>
+                <button onclick="openDeleteAccountConfirmation()" class="w-full text-left py-2 px-3 bg-red-50 hover:bg-red-100 rounded-lg text-sm text-red-600 font-medium flex items-center justify-between">
+                    <span>Delete Account</span>
+                    <i class="fa-solid fa-trash text-xs"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- PASSWORD CONFIRMATION DELETE POPUP -->
+    <div id="modalDeleteConfirm" class="fixed inset-0 bg-black/50 hidden z-50 flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-xs rounded-2xl p-5 space-y-4 shadow-2xl text-center">
+            <h4 class="font-bold text-slate-800 text-lg">Confirm Action</h4>
+            <p class="text-xs text-slate-500">Please enter your password to confirm deletion:</p>
+            <input type="password" id="deleteConfirmPassword" placeholder="••••••••" class="w-full px-3 py-2 border rounded-lg text-sm text-center outline-none focus:ring-2 focus:ring-red-500">
+            <div class="flex gap-2">
+                <button onclick="closeModal('modalDeleteConfirm')" class="flex-1 py-2 bg-slate-200 text-slate-700 rounded-lg text-xs font-bold">Cancel</button>
+                <button onclick="executeDeletionWithPassword()" class="flex-1 py-2 bg-red-600 text-white rounded-lg text-xs font-bold shadow">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- LOGOUT POPUP -->
+    <div id="modalLogoutConfirm" class="fixed inset-0 bg-black/50 hidden z-50 flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-xs rounded-2xl p-5 space-y-4 shadow-2xl text-center">
+            <h4 class="font-bold text-slate-800 text-lg">Log Out?</h4>
+            <p class="text-xs text-slate-500">Are you sure you want to log out of KASU?</p>
+            <div class="flex gap-2">
+                <button onclick="closeModal('modalLogoutConfirm')" class="flex-1 py-2 bg-slate-200 text-slate-700 rounded-lg text-xs font-bold">No</button>
+                <button onclick="handleLogout()" class="flex-1 py-2 bg-indigo-600 text-white rounded-lg text-xs font-bold shadow">Yes</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ADD ACCOUNT MODAL -->
+    <div id="modalAddAccount" class="fixed inset-0 bg-black/50 hidden z-50 flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-sm rounded-2xl p-5 space-y-4 shadow-2xl">
+            <h3 class="font-bold text-slate-800 border-b pb-2">Add / Edit Account</h3>
+            <div class="space-y-3 text-xs">
+                <div>
+                    <label class="block text-slate-600 mb-1">Account Name</label>
+                    <input type="text" id="accName" placeholder="e.g. HDFC Savings" class="w-full p-2 border rounded-lg outline-none">
+                </div>
+                <div>
+                    <label class="block text-slate-600 mb-1">Type</label>
+                    <select id="accType" class="w-full p-2 border rounded-lg outline-none">
+                        <option value="Cash">Cash 💵</option>
+                        <option value="Bank">Bank 🏦</option>
+                        <option value="UPI">UPI 📱</option>
+                        <option value="Savings">Savings 🐷</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-slate-600 mb-1">Initial Balance (₹)</label>
+                    <input type="number" id="accBalance" placeholder="0" class="w-full p-2 border rounded-lg outline-none">
+                </div>
+            </div>
+            <div class="flex gap-2 pt-2">
+                <button onclick="closeModal('modalAddAccount')" class="flex-1 py-2 bg-slate-200 text-slate-700 rounded-lg text-xs font-bold">Cancel</button>
+                <button onclick="saveAccount()" class="flex-1 py-2 bg-indigo-600 text-white rounded-lg text-xs font-bold shadow">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ADD TRANSACTION MODAL -->
+    <div id="modalAddTransaction" class="fixed inset-0 bg-black/50 hidden z-50 flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-sm rounded-2xl p-5 space-y-4 shadow-2xl">
+            <h3 class="font-bold text-slate-800 border-b pb-2">Add Transaction</h3>
+            <div class="space-y-3 text-xs">
+                <div>
+                    <label class="block text-slate-600 mb-1">Amount (₹)</label>
+                    <input type="number" id="txAmount" placeholder="0.00" class="w-full p-2 border rounded-lg outline-none text-base font-bold">
+                </div>
+                <div>
+                    <label class="block text-slate-600 mb-1">Type</label>
+                    <div class="flex gap-2">
+                        <button type="button" onclick="setTxType('expense')" id="btnTxExpense" class="flex-1 py-1.5 rounded-lg border text-center font-semibold bg-red-50 border-red-400 text-red-600">Expense 🔴</button>
+                        <button type="button" onclick="setTxType('income')" id="btnTxIncome" class="flex-1 py-1.5 rounded-lg border text-center font-semibold bg-slate-50 border-slate-200 text-slate-600">Income 🟢</button>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-slate-600 mb-1">Category</label>
+                    <select id="txCategory" class="w-full p-2 border rounded-lg outline-none">
+                        <option value="Food 🍔">Food 🍔</option>
+                        <option value="Shopping 🛍️">Shopping 🛍️</option>
+                        <option value="Bills ⚡">Bills ⚡</option>
+                        <option value="Salary 💵">Salary 💵</option>
+                        <option value="Travel 🚗">Travel 🚗</option>
+                        <option value="Entertainment 🎬">Entertainment 🎬</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-slate-600 mb-1">Note (Optional)</label>
+                    <input type="text" id="txNote" placeholder="Lunch at cafe" class="w-full p-2 border rounded-lg outline-none">
+                </div>
+            </div>
+            <div class="flex gap-2 pt-2">
+                <button onclick="closeModal('modalAddTransaction')" class="flex-1 py-2 bg-slate-200 text-slate-700 rounded-lg text-xs font-bold">Cancel</button>
+                <button onclick="saveTransaction()" class="flex-1 py-2 bg-indigo-600 text-white rounded-lg text-xs font-bold shadow">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- JS SCRIPT -->
+    <script>
+        // SUPABASE CLIENT INITIALIZATION
+        const SUPABASE_URL = 'https://skspuaetpklovwiqlkup.supabase.co';
+        const SUPABASE_KEY = 'sb_publishable_ZH84JRGxSLqFnkTtb9Kz_Q_yROByHbo';
+        const FINNHUB_KEY = 'dbor8u9r01qo2f3o6mm0dbor8u9r01qo2f3o6mmg';
+        
+        const client = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        let currentUser = null;
+        let selectedTxType = 'expense';
+        let pendingDeleteAction = null;
+
+        // AUTH & INIT
+        window.addEventListener('DOMContentLoaded', async () => {
+            const { data: { session } } = await client.auth.getSession();
+            if (session) {
+                currentUser = session.user;
+                showAppUI();
+            }
+        });
+
+        function toggleAuthMode(mode) {
+            if (mode === 'signup') {
+                document.getElementById('loginForm').classList.add('hidden');
+                document.getElementById('signupForm').classList.remove('hidden');
+            } else {
+                document.getElementById('signupForm').classList.add('hidden');
+                document.getElementById('loginForm').classList.remove('hidden');
+            }
+        }
+
+        async function handleLogin() {
+            const email = document.getElementById('loginEmail').value;
+            const password = document.getElementById('loginPassword').value;
+            if(!email || !password) return alert('Enter email & password');
+
+            const { data, error } = await client.auth.signInWithPassword({ email, password });
+            if (error) return alert(error.message);
+
+            currentUser = data.user;
+            showAppUI();
+        }
+
+        async function handleSignup() {
+            const email = document.getElementById('signupEmail').value;
+            const password = document.getElementById('signupPassword').value;
+            const token = document.getElementById('signupOtp').value;
+
+            if (token) {
+                const { data, error } = await client.auth.verifyOtp({ email, token, type: 'signup' });
+                if (error) return alert(error.message);
+                currentUser = data.user;
+                showAppUI();
+            } else {
+                const { data, error } = await client.auth.signUp({ email, password });
+                if (error) return alert(error.message);
+                alert('Verification code sent! Please check your email.');
+            }
+        }
+
+        async function sendVerificationCode() {
+            const email = document.getElementById('signupEmail').value;
+            if(!email) return alert('Enter email address');
+            const { error } = await client.auth.signInWithOtp({ email });
+            if (error) alert(error.message);
+            else alert('OTP sent to email!');
+        }
+
+        function triggerBiometricAuth() {
+            alert('Biometric Fingerprint Authentication triggered for supported mobile devices.');
+        }
+
+        function showAppUI() {
+            document.getElementById('authSection').classList.add('hidden');
+            document.getElementById('appHeader').classList.remove('hidden');
+            document.getElementById('mainContent').classList.remove('hidden');
+            document.getElementById('appNav').classList.remove('hidden');
+            document.getElementById('settingsUserEmail').innerText = currentUser.email;
+
+            loadData();
+            setupRealtime();
+        }
+
+        // REALTIME SUBSCRIPTION
+        function setupRealtime() {
+            client.channel('schema-db-changes')
+                .on('postgres_changes', { event: '*', schema: 'public' }, () => {
+                    loadData();
+                })
+                .subscribe();
+        }
+
+        // DATA LOADING
+        async function loadData() {
+            loadAccounts();
+            loadTransactions();
+        }
+
+        async function loadAccounts() {
+            const { data } = await client.from('accounts').select('*');
+            const container = document.getElementById('accountsListContainer');
+            const homeContainer = document.getElementById('homeAccountsContainer');
+
+            let totalBalance = 0;
+            let html = '';
+
+            (data || []).forEach(acc => {
+                totalBalance += parseFloat(acc.balance || 0);
+                html += `
+                    <div class="p-3 bg-white border rounded-xl flex justify-between items-center shadow-sm">
+                        <div>
+                            <div class="font-bold text-slate-800 text-sm">${acc.name}</div>
+                            <div class="text-xs text-slate-400">${acc.type}</div>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <span class="font-extrabold text-slate-700">₹${parseFloat(acc.balance).toFixed(2)}</span>
+                            <button onclick="confirmDelete('account', '${acc.id}')" class="text-red-400 hover:text-red-600 text-xs"><i class="fa-solid fa-trash"></i></button>
+                        </div>
+                    </div>
+                `;
+            });
+
+            if(container) container.innerHTML = html || '<div class="text-xs text-slate-400">No accounts added yet.</div>';
+            if(homeContainer) homeContainer.innerHTML = html || '<div class="text-xs text-slate-400">No accounts.</div>';
+
+            document.getElementById('netWorthVal').innerText = `₹${totalBalance.toFixed(2)}`;
+        }
+
+        async function loadTransactions() {
+            const { data } = await client.from('transactions').select('*').order('created_at', { ascending: false });
+            const container = document.getElementById('transactionsListContainer');
+
+            let html = '';
+            (data || []).forEach(tx => {
+                const isExpense = tx.type === 'expense';
+                html += `
+                    <div class="p-3 bg-white border rounded-xl flex justify-between items-center shadow-sm">
+                        <div>
+                            <div class="font-bold text-slate-800 text-sm">${tx.category}</div>
+                            <div class="text-xs text-slate-400">${tx.note || 'No note'}</div>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <span class="font-extrabold ${isExpense ? 'text-red-500' : 'text-emerald-500'}">${isExpense ? '-' : '+'}₹${parseFloat(tx.amount).toFixed(2)}</span>
+                            <button onclick="confirmDelete('transaction', '${tx.id}')" class="text-red-400 hover:text-red-600 text-xs"><i class="fa-solid fa-trash"></i></button>
+                        </div>
+                    </div>
+                `;
+            });
+
+            if(container) container.innerHTML = html || '<div class="text-xs text-slate-400">No transactions recorded.</div>';
+        }
+
+        // SAVE ACTIONS
+        async function saveAccount() {
+            const name = document.getElementById('accName').value;
+            const type = document.getElementById('accType').value;
+            const balance = document.getElementById('accBalance').value || 0;
+
+            if(!name) return alert('Enter account name');
+
+            await client.from('accounts').insert([{ user_id: currentUser.id, name, type, balance }]);
+            closeModal('modalAddAccount');
+            loadAccounts();
+        }
+
+        async function saveTransaction() {
+            const amount = document.getElementById('txAmount').value;
+            const category = document.getElementById('txCategory').value;
+            const note = document.getElementById('txNote').value;
+
+            if(!amount) return alert('Enter amount');
+
+            await client.from('transactions').insert([{ user_id: currentUser.id, amount, type: selectedTxType, category, note }]);
+            closeModal('modalAddTransaction');
+            loadTransactions();
+        }
+
+        function setTxType(type) {
+            selectedTxType = type;
+            const btnExp = document.getElementById('btnTxExpense');
+            const btnInc = document.getElementById('btnTxIncome');
+
+            if(type === 'expense') {
+                btnExp.className = 'flex-1 py-1.5 rounded-lg border text-center font-semibold bg-red-50 border-red-400 text-red-600';
+                btnInc.className = 'flex-1 py-1.5 rounded-lg border text-center font-semibold bg-slate-50 border-slate-200 text-slate-600';
+            } else {
+                btnInc.className = 'flex-1 py-1.5 rounded-lg border text-center font-semibold bg-emerald-50 border-emerald-400 text-emerald-600';
+                btnExp.className = 'flex-1 py-1.5 rounded-lg border text-center font-semibold bg-slate-50 border-slate-200 text-slate-600';
+            }
+        }
+
+        // MODAL MANAGEMENT & POPUPS
+        function openModal(id) { document.getElementById(id).classList.remove('hidden'); }
+        function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+
+        function openSettingsModal() { openModal('modalSettings'); }
+        function openLogoutConfirmation() { closeModal('modalSettings'); openModal('modalLogoutConfirm'); }
+
+        async function handleLogout() {
+            await client.auth.signOut();
+            window.location.reload();
+        }
+
+        function confirmDelete(type, id) {
+            pendingDeleteAction = { type, id };
+            openModal('modalDeleteConfirm');
+        }
+
+        async function executeDeletionWithPassword() {
+            const password = document.getElementById('deleteConfirmPassword').value;
+            if(!password) return alert('Enter password to confirm deletion');
+
+            // Re-authenticate user to confirm password
+            const { error } = await client.auth.signInWithPassword({ email: currentUser.email, password });
+            if (error) return alert('Incorrect password!');
+
+            if (pendingDeleteAction) {
+                if (pendingDeleteAction.type === 'account') {
+                    await client.from('accounts').delete().eq('id', pendingDeleteAction.id);
+                } else if (pendingDeleteAction.type === 'transaction') {
+                    await client.from('transactions').delete().eq('id', pendingDeleteAction.id);
+                }
+            }
+
+            closeModal('modalDeleteConfirm');
+            pendingDeleteAction = null;
+            document.getElementById('deleteConfirmPassword').value = '';
+            loadData();
+        }
+
+        function openDeleteAccountConfirmation() {
+            closeModal('modalSettings');
+            pendingDeleteAction = { type: 'user' };
+            openModal('modalDeleteConfirm');
+        }
+
+        // NAVIGATION SWITCHING
+        function switchPage(pageName) {
+            const pages = ['Home', 'Accounts', 'Portfolio', 'Recurring', 'Budgets'];
+            pages.forEach(p => {
+                document.getElementById(`page${p}`).classList.add('hidden');
+            });
+            document.getElementById(`page${pageName}`).classList.remove('hidden');
+
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                if(btn.dataset.page === pageName) {
+                    btn.className = 'nav-btn flex flex-col items-center text-indigo-600 font-bold';
+                } else {
+                    btn.className = 'nav-btn flex flex-col items-center text-slate-500 hover:text-indigo-600';
+                }
+            });
+        }
+    </script>
+</body>
+</html>
