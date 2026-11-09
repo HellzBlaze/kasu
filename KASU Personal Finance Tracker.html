@@ -1,0 +1,1103 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KASU - Personal Finance Tracker</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js for Budget & Expense Charts -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Supabase JS Client -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    colors: {
+                        kasu: {
+                            50: '#f0fdf4',
+                            100: '#dcfce7',
+                            500: '#22c55e',
+                            600: '#16a34a',
+                            700: '#15803d',
+                            900: '#14532d'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body class="bg-slate-900 text-slate-100 h-full flex flex-col justify-between selection:bg-kasu-500 selection:text-white">
+
+    <!-- Toast Notification Container -->
+    <div id="toast-container" class="fixed top-4 right-4 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+    <!-- AUTHENTICATION VIEW -->
+    <div id="auth-view" class="fixed inset-0 bg-slate-900 z-40 flex flex-col justify-center items-center p-4 overflow-y-auto">
+        <div class="w-full max-w-md bg-slate-800 border border-slate-700 rounded-2xl p-6 shadow-2xl">
+            <div class="text-center mb-6">
+                <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-kasu-500/10 text-kasu-500 text-2xl font-bold mb-3 shadow-inner">
+                    <i class="fa-solid fa-wallet"></i>
+                </div>
+                <h1 class="text-3xl font-bold text-white tracking-tight">KASU</h1>
+                <p class="text-sm text-slate-400 mt-1">Your Personal Finance & Investment Hub</p>
+            </div>
+
+            <!-- Auth Tabs -->
+            <div class="flex rounded-xl bg-slate-900 p-1 mb-6 border border-slate-700">
+                <button onclick="switchAuthTab('login')" id="tab-login" class="flex-1 py-2 text-sm font-semibold rounded-lg bg-kasu-600 text-white transition">Login</button>
+                <button onclick="switchAuthTab('signup')" id="tab-signup" class="flex-1 py-2 text-sm font-semibold rounded-lg text-slate-400 hover:text-white transition">Sign Up</button>
+            </div>
+
+            <!-- Login Form -->
+            <form id="form-login" onsubmit="handleLogin(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-medium text-slate-300 mb-1">Email Address</label>
+                    <input type="email" id="login-email" required class="w-full px-4 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white text-sm focus:outline-none focus:border-kasu-500" placeholder="you@example.com">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-300 mb-1">Password</label>
+                    <div class="relative">
+                        <input type="password" id="login-password" required class="w-full px-4 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white text-sm focus:outline-none focus:border-kasu-500" placeholder="••••••••">
+                        <button type="button" onclick="quickDemoLogin()" class="absolute right-3 top-2.5 text-xs text-kasu-400 hover:underline">Demo Login</button>
+                    </div>
+                </div>
+                <button type="submit" class="w-full py-3 bg-kasu-600 hover:bg-kasu-700 text-white font-semibold rounded-xl shadow-lg shadow-kasu-600/30 transition">Login to KASU</button>
+            </form>
+
+            <!-- Signup Form -->
+            <form id="form-signup" onsubmit="handleSignup(event)" class="space-y-4 hidden">
+                <div>
+                    <label class="block text-xs font-medium text-slate-300 mb-1">Email Address</label>
+                    <div class="flex gap-2">
+                        <input type="email" id="signup-email" required class="flex-1 px-4 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white text-sm focus:outline-none focus:border-kasu-500" placeholder="you@example.com">
+                        <button type="button" onclick="sendVerificationEmail()" class="px-3 py-2 bg-slate-700 hover:bg-slate-600 text-xs font-medium rounded-xl text-white transition">Verify</button>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-300 mb-1">Password</label>
+                    <input type="password" id="signup-password" required class="w-full px-4 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white text-sm focus:outline-none focus:border-kasu-500" placeholder="••••••••">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-300 mb-1">Verification Code</label>
+                    <input type="text" id="signup-code" required class="w-full px-4 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white text-sm focus:outline-none focus:border-kasu-500" placeholder="Enter 6-digit code">
+                </div>
+                <button type="submit" class="w-full py-3 bg-kasu-600 hover:bg-kasu-700 text-white font-semibold rounded-xl shadow-lg shadow-kasu-600/30 transition">Create Account</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- MAIN APP WRAPPER -->
+    <div id="main-app" class="flex flex-col h-full max-w-md mx-auto w-full bg-slate-950 relative shadow-2xl overflow-hidden hidden">
+        
+        <!-- TOP HEADER BAR -->
+        <header class="flex items-center justify-between px-4 py-3 bg-slate-900 border-b border-slate-800 z-10 shrink-0">
+            <div class="flex items-center gap-2">
+                <div class="w-8 h-8 rounded-lg bg-kasu-500 flex items-center justify-center text-white font-bold text-sm shadow">
+                    <i class="fa-solid fa-wallet"></i>
+                </div>
+                <span class="text-xl font-bold tracking-wider text-white">KASU</span>
+            </div>
+            <div class="flex items-center gap-3">
+                <button onclick="openSettingsModal()" class="w-9 h-9 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-300 hover:text-white hover:bg-slate-700 transition">
+                    <i class="fa-solid fa-gear"></i>
+                </button>
+            </div>
+        </header>
+
+        <!-- CONTENT VIEWS CONTAINER -->
+        <main class="flex-1 overflow-y-auto relative pb-20">
+            
+            <!-- 1. HOME VIEW -->
+            <section id="view-home" class="p-4 space-y-4">
+                <!-- Net Worth Banner -->
+                <div class="bg-gradient-to-br from-slate-800 to-slate-900 border border-slate-700 p-5 rounded-2xl shadow-lg relative overflow-hidden">
+                    <div class="absolute right-[-20px] bottom-[-20px] text-slate-700/30 text-8xl pointer-events-none">
+                        <i class="fa-solid fa-chart-line"></i>
+                    </div>
+                    <div class="text-xs uppercase tracking-wider text-slate-400 font-medium">Net Worth (Real-Time)</div>
+                    <div id="home-networth" class="text-3xl font-bold text-white mt-1">₹0.00</div>
+                    <div class="flex items-center gap-2 mt-2 text-xs text-kasu-400">
+                        <i class="fa-solid fa-rotate animate-spin" id="networth-spinner"></i>
+                        <span>Updates every 5 min via Finnhub & Supabase</span>
+                    </div>
+                </div>
+
+                <!-- Budgets Horizontal Scroll -->
+                <div>
+                    <div class="flex justify-between items-center mb-2">
+                        <h2 class="text-sm font-semibold text-slate-300">Budgets Overview</h2>
+                        <button onclick="switchTab('budgets')" class="text-xs text-kasu-400 hover:underline">View All</button>
+                    </div>
+                    <div id="home-budgets-scroll" class="flex gap-3 overflow-x-auto hide-scrollbar pb-1">
+                        <!-- Dynamically populated -->
+                    </div>
+                </div>
+
+                <!-- Accounts & Investments Quick Overview -->
+                <div class="space-y-3">
+                    <h2 class="text-sm font-semibold text-slate-300">Accounts & Investments</h2>
+                    <div id="home-accounts-list" class="space-y-2">
+                        <!-- Dynamically populated -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- 2. ACCOUNTS & TRANSACTIONS VIEW -->
+            <section id="view-accounts" class="p-4 space-y-4 hidden">
+                <div class="flex justify-between items-center">
+                    <h2 class="text-lg font-bold text-white">Accounts</h2>
+                    <button onclick="openAccountModal()" class="px-3 py-1.5 bg-kasu-600 hover:bg-kasu-700 text-white text-xs font-semibold rounded-lg transition">
+                        <i class="fa-solid fa-plus mr-1"></i> New Account
+                    </button>
+                </div>
+                <div id="accounts-cards-grid" class="grid grid-cols-2 gap-3">
+                    <!-- Accounts list -->
+                </div>
+
+                <div class="pt-2 flex justify-between items-center">
+                    <h2 class="text-lg font-bold text-white">Transactions</h2>
+                    <button onclick="openTransactionModal()" class="px-3 py-1.5 bg-kasu-600 hover:bg-kasu-700 text-white text-xs font-semibold rounded-lg transition">
+                        <i class="fa-solid fa-plus mr-1"></i> New Transaction
+                    </button>
+                </div>
+
+                <!-- Filter Tabs -->
+                <div class="flex gap-2 overflow-x-auto hide-scrollbar pb-1 text-xs font-medium">
+                    <button onclick="filterTransactions('all')" id="filter-all" class="px-3 py-1.5 rounded-lg bg-kasu-600 text-white shrink-0">All</button>
+                    <button onclick="filterTransactions('lastweek')" id="filter-lastweek" class="px-3 py-1.5 rounded-lg bg-slate-800 text-slate-300 shrink-0">Last Week</button>
+                    <button onclick="filterTransactions('lastmonth')" id="filter-lastmonth" class="px-3 py-1.5 rounded-lg bg-slate-800 text-slate-300 shrink-0">Last Month</button>
+                    <button onclick="filterTransactions('income')" id="filter-income" class="px-3 py-1.5 rounded-lg bg-slate-800 text-slate-300 shrink-0">Income</button>
+                    <button onclick="filterTransactions('expense')" id="filter-expense" class="px-3 py-1.5 rounded-lg bg-slate-800 text-slate-300 shrink-0">Expense</button>
+                </div>
+
+                <div id="transactions-list" class="space-y-2">
+                    <!-- Transactions populated -->
+                </div>
+            </section>
+
+            <!-- 3. PORTFOLIO VIEW -->
+            <section id="view-portfolio" class="p-4 space-y-4 hidden">
+                <div class="flex justify-between items-center">
+                    <h2 class="text-lg font-bold text-white">Trading Investments (Finnhub Live)</h2>
+                    <button onclick="openTradingInvestmentModal()" class="px-3 py-1.5 bg-kasu-600 hover:bg-kasu-700 text-white text-xs font-semibold rounded-lg transition">
+                        <i class="fa-solid fa-plus mr-1"></i> Add
+                    </button>
+                </div>
+                <div id="trading-investments-list" class="space-y-3">
+                    <!-- Trading items -->
+                </div>
+
+                <div class="flex justify-between items-center pt-3">
+                    <h2 class="text-lg font-bold text-white">Non-Trading Investments</h2>
+                    <button onclick="openNonTradingInvestmentModal()" class="px-3 py-1.5 bg-kasu-600 hover:bg-kasu-700 text-white text-xs font-semibold rounded-lg transition">
+                        <i class="fa-solid fa-plus mr-1"></i> Add
+                    </button>
+                </div>
+                <div id="nontrading-investments-list" class="space-y-3">
+                    <!-- Non trading items -->
+                </div>
+            </section>
+
+            <!-- 4. RECURRING & BILLS VIEW -->
+            <section id="view-recurring" class="p-4 space-y-4 hidden">
+                <div class="flex justify-between items-center">
+                    <h2 class="text-lg font-bold text-white">Recurring Transactions</h2>
+                    <button onclick="openRecurringModal()" class="px-3 py-1.5 bg-kasu-600 hover:bg-kasu-700 text-white text-xs font-semibold rounded-lg transition">
+                        <i class="fa-solid fa-plus mr-1"></i> Add
+                    </button>
+                </div>
+                <div id="recurring-transactions-list" class="space-y-3">
+                    <!-- Recurring tx -->
+                </div>
+
+                <div class="flex justify-between items-center pt-3">
+                    <h2 class="text-lg font-bold text-white">Bills & Payables</h2>
+                    <button onclick="openBillModal()" class="px-3 py-1.5 bg-kasu-600 hover:bg-kasu-700 text-white text-xs font-semibold rounded-lg transition">
+                        <i class="fa-solid fa-plus mr-1"></i> Add Bill
+                    </button>
+                </div>
+                <div id="bills-list" class="space-y-3">
+                    <!-- Bills list -->
+                </div>
+            </section>
+
+            <!-- 5. BUDGETS & EXPENSES VIEW -->
+            <section id="view-budgets" class="p-4 space-y-4 hidden">
+                <div class="flex justify-between items-center">
+                    <h2 class="text-lg font-bold text-white">Expense Breakdown</h2>
+                    <button onclick="openBudgetModal()" class="px-3 py-1.5 bg-kasu-600 hover:bg-kasu-700 text-white text-xs font-semibold rounded-lg transition">
+                        <i class="fa-solid fa-plus mr-1"></i> New Budget
+                    </button>
+                </div>
+                <!-- Chart container -->
+                <div class="bg-slate-900 border border-slate-800 p-4 rounded-2xl flex justify-center items-center">
+                    <div class="w-64 h-64">
+                        <canvas id="expenseChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="flex justify-between items-center pt-2">
+                    <h2 class="text-lg font-bold text-white">Spending & Saving Budgets</h2>
+                </div>
+                <div id="budgets-list" class="space-y-3">
+                    <!-- Budgets list -->
+                </div>
+            </section>
+
+        </main>
+
+        <!-- BOTTOM NAVIGATION BAR -->
+        <nav class="absolute bottom-0 left-0 right-0 h-16 bg-slate-900 border-t border-slate-800 flex items-center justify-around px-2 z-20">
+            <button onclick="switchTab('home')" id="nav-home" class="flex flex-col items-center justify-center flex-1 text-kasu-500 transition">
+                <i class="fa-solid fa-house text-lg"></i>
+                <span class="text-[10px] mt-1 font-medium">Home</span>
+            </button>
+            <button onclick="switchTab('accounts')" id="nav-accounts" class="flex flex-col items-center justify-center flex-1 text-slate-400 hover:text-white transition">
+                <i class="fa-solid fa-wallet text-lg"></i>
+                <span class="text-[10px] mt-1 font-medium">Accounts</span>
+            </button>
+            <button onclick="switchTab('portfolio')" id="nav-portfolio" class="flex flex-col items-center justify-center flex-1 text-slate-400 hover:text-white transition">
+                <i class="fa-solid fa-chart-pie text-lg"></i>
+                <span class="text-[10px] mt-1 font-medium">Portfolio</span>
+            </button>
+            <button onclick="switchTab('recurring')" id="nav-recurring" class="flex flex-col items-center justify-center flex-1 text-slate-400 hover:text-white transition">
+                <i class="fa-solid fa-repeat text-lg"></i>
+                <span class="text-[10px] mt-1 font-medium">Recurring</span>
+            </button>
+            <button onclick="switchTab('budgets')" id="nav-budgets" class="flex flex-col items-center justify-center flex-1 text-slate-400 hover:text-white transition">
+                <i class="fa-solid fa-bullseye text-lg"></i>
+                <span class="text-[10px] mt-1 font-medium">Budgets</span>
+            </button>
+        </nav>
+    </div>
+
+    <!-- MODALS & POP-UPS -->
+
+    <!-- 1. Add/Edit Account Modal -->
+    <div id="modal-account" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-sm p-6 space-y-4">
+            <div class="flex justify-between items-center">
+                <h3 id="account-modal-title" class="text-lg font-bold text-white">Add Account</h3>
+                <button onclick="closeModal('modal-account')" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <form id="form-account" onsubmit="saveAccount(event)" class="space-y-4">
+                <input type="hidden" id="account-id">
+                <div>
+                    <label class="block text-xs font-medium text-slate-300 mb-1">Account Name & Emoji</label>
+                    <input type="text" id="account-name" required class="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-xl text-white text-sm" placeholder="e.g. 💵 Cash">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-300 mb-1">Initial Balance (₹)</label>
+                    <input type="number" step="any" id="account-balance" required class="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-xl text-white text-sm" placeholder="0.00">
+                </div>
+                <div class="flex gap-2 pt-2">
+                    <button type="button" id="account-delete-btn" onclick="promptDeleteAccount()" class="px-4 py-2.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 text-xs font-semibold rounded-xl hidden">Delete</button>
+                    <button type="submit" class="flex-1 py-2.5 bg-kasu-600 hover:bg-kasu-700 text-white text-xs font-semibold rounded-xl">Save Account</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 2. Add Transaction Modal -->
+    <div id="modal-transaction" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-sm p-6 space-y-4">
+            <div class="flex justify-between items-center">
+                <h3 class="text-lg font-bold text-white">Add Transaction</h3>
+                <button onclick="closeModal('modal-transaction')" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <form onsubmit="saveTransaction(event)" class="space-y-4">
+                <div class="flex rounded-xl bg-slate-800 p-1 border border-slate-700">
+                    <button type="button" onclick="setTxType('expense')" id="tx-type-expense" class="flex-1 py-1.5 text-xs font-semibold rounded-lg bg-red-600 text-white transition">Expense</button>
+                    <button type="button" onclick="setTxType('income')" id="tx-type-income" class="flex-1 py-1.5 text-xs font-semibold rounded-lg text-slate-400 transition">Income</button>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-300 mb-1">Amount (₹)</label>
+                    <input type="number" step="any" id="tx-amount" required class="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-xl text-white text-sm" placeholder="0.00">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-300 mb-1">Category</label>
+                    <select id="tx-category" class="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-xl text-white text-sm">
+                        <option value="🍔 Food">🍔 Food</option>
+                        <option value="🏠 Rent">🏠 Rent</option>
+                        <option value="💡 Utilities">💡 Utilities</option>
+                        <option value="🚗 Transport">🚗 Transport</option>
+                        <option value="🛍️ Shopping">🛍️ Shopping</option>
+                        <option value="💰 Salary">💰 Salary</option>
+                        <option value="📈 Investment">📈 Investment</option>
+                        <option value="🎉 Entertainment">🎉 Entertainment</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-300 mb-1">Account</label>
+                    <select id="tx-account" class="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-xl text-white text-sm">
+                        <!-- Populated dynamically -->
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-300 mb-1">Date & Time</label>
+                    <input type="datetime-local" id="tx-date" required class="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-xl text-white text-sm">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-300 mb-1">Note (Optional)</label>
+                    <input type="text" id="tx-note" class="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-xl text-white text-sm" placeholder="Note...">
+                </div>
+                <button type="submit" class="w-full py-2.5 bg-kasu-600 hover:bg-kasu-700 text-white text-xs font-semibold rounded-xl">Add Transaction</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- 3. Add/Edit Trading Investment Modal -->
+    <div id="modal-trading" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-sm p-6 space-y-4">
+            <div class="flex justify-between items-center">
+                <h3 class="text-lg font-bold text-white">Add Trading Investment</h3>
+                <button onclick="closeModal('modal-trading')" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <form onsubmit="saveTradingInvestment(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-medium text-slate-300 mb-1">Finnhub Ticker Symbol</label>
+                    <input type="text" id="trade-symbol" required class="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-xl text-white text-sm uppercase" placeholder="e.g. AAPL, BINANCE:BTCUSDT, ^BSESN">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-300 mb-1">Investment Name</label>
+                    <input type="text" id="trade-name" required class="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-xl text-white text-sm" placeholder="e.g. Apple Inc">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-300 mb-1">Units / Shares Owned</label>
+                    <input type="number" step="any" id="trade-amount" required class="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-xl text-white text-sm" placeholder="5.25">
+                </div>
+                <button type="submit" class="w-full py-2.5 bg-kasu-600 hover:bg-kasu-700 text-white text-xs font-semibold rounded-xl">Save Investment</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- 4. Add Non-Trading Investment Modal -->
+    <div id="modal-nontrading" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-sm p-6 space-y-4">
+            <div class="flex justify-between items-center">
+                <h3 class="text-lg font-bold text-white">Add Non-Trading Investment</h3>
+                <button onclick="closeModal('modal-nontrading')" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <form onsubmit="saveNonTradingInvestment(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-medium text-slate-300 mb-1">Name (e.g. SBI-FD, Gold Bond)</label>
+                    <input type="text" id="nt-name" required class="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-xl text-white text-sm">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-300 mb-1">Principal Amount (₹)</label>
+                    <input type="number" step="any" id="nt-amount" required class="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-xl text-white text-sm" placeholder="25000">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-300 mb-1">Interest Rate (%)</label>
+                    <input type="number" step="any" id="nt-interest" required class="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-xl text-white text-sm" placeholder="7.5">
+                </div>
+                <button type="submit" class="w-full py-2.5 bg-kasu-600 hover:bg-kasu-700 text-white text-xs font-semibold rounded-xl">Save Non-Trading</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- 5. Add/Edit Recurring & Bills Modal -->
+    <div id="modal-recurring" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-sm p-6 space-y-4">
+            <div class="flex justify-between items-center">
+                <h3 class="text-lg font-bold text-white">Add Recurring Item</h3>
+                <button onclick="closeModal('modal-recurring')" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <form onsubmit="saveRecurringItem(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-medium text-slate-300 mb-1">Label / Name</label>
+                    <input type="text" id="rec-name" required class="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-xl text-white text-sm" placeholder="e.g. Salary, Rent, Gas">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-300 mb-1">Amount (₹)</label>
+                    <input type="number" step="any" id="rec-amount" required class="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-xl text-white text-sm">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-300 mb-1">Type</label>
+                    <select id="rec-type" class="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-xl text-white text-sm">
+                        <option value="recurring">Recurring Transaction</option>
+                        <option value="bill">Bill (Payable)</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-300 mb-1">Frequency</label>
+                    <select id="rec-freq" class="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-xl text-white text-sm">
+                        <option value="Every Month">Every Month</option>
+                        <option value="Every Week">Every Week</option>
+                        <option value="Every Quarter">Every Quarter</option>
+                        <option value="Every Year">Every Year</option>
+                    </select>
+                </div>
+                <button type="submit" class="w-full py-2.5 bg-kasu-600 hover:bg-kasu-700 text-white text-xs font-semibold rounded-xl">Save</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- 6. Add/Edit Budget Modal -->
+    <div id="modal-budget" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-sm p-6 space-y-4">
+            <div class="flex justify-between items-center">
+                <h3 class="text-lg font-bold text-white">Add Budget</h3>
+                <button onclick="closeModal('modal-budget')" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <form onsubmit="saveBudget(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-medium text-slate-300 mb-1">Budget Name / Category</label>
+                    <input type="text" id="budget-name" required class="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-xl text-white text-sm" placeholder="e.g. 🍔 Food Expenditure">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-300 mb-1">Max Limit / Target (₹)</label>
+                    <input type="number" step="any" id="budget-limit" required class="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-xl text-white text-sm" placeholder="10000">
+                </div>
+                <button type="submit" class="w-full py-2.5 bg-kasu-600 hover:bg-kasu-700 text-white text-xs font-semibold rounded-xl">Save Budget</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- 7. Password Confirmation Modal for Sensitive Deletions -->
+    <div id="modal-password-confirm" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-sm p-6 space-y-4">
+            <h3 class="text-lg font-bold text-white">Password Confirmation</h3>
+            <p class="text-xs text-slate-400">Please enter your account password to confirm this deletion.</p>
+            <input type="password" id="confirm-password-input" class="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-xl text-white text-sm" placeholder="••••••••">
+            <div class="flex gap-2">
+                <button onclick="closeModal('modal-password-confirm')" class="flex-1 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold rounded-xl">Cancel</button>
+                <button onclick="executeConfirmedDelete()" class="flex-1 py-2.5 bg-red-600 hover:bg-red-700 text-white text-xs font-semibold rounded-xl">Confirm Delete</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 8. Logout Confirmation Modal -->
+    <div id="modal-logout" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-sm p-6 space-y-4 text-center">
+            <div class="w-12 h-12 rounded-full bg-red-500/10 text-red-500 flex items-center justify-center mx-auto text-xl">
+                <i class="fa-solid fa-right-from-bracket"></i>
+            </div>
+            <h3 class="text-lg font-bold text-white">Log Out?</h3>
+            <p class="text-xs text-slate-400">Are you sure you want to log out of KASU?</p>
+            <div class="flex gap-2 pt-2">
+                <button onclick="closeModal('modal-logout')" class="flex-1 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold rounded-xl">Cancel</button>
+                <button onclick="performLogout()" class="flex-1 py-2.5 bg-red-600 hover:bg-red-700 text-white text-xs font-semibold rounded-xl">Yes, Log Out</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 9. Settings Modal -->
+    <div id="modal-settings" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-sm p-6 space-y-4">
+            <div class="flex justify-between items-center">
+                <h3 class="text-lg font-bold text-white">Settings</h3>
+                <button onclick="closeModal('modal-settings')" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <div class="space-y-3">
+                <div class="p-3 bg-slate-800 rounded-xl flex justify-between items-center">
+                    <div>
+                        <div class="text-sm font-medium text-white">Supabase Status</div>
+                        <div class="text-xs text-kasu-400">Mumbai Region Connected</div>
+                    </div>
+                    <span class="w-3 h-3 rounded-full bg-kasu-500 inline-block"></span>
+                </div>
+                <div class="p-3 bg-slate-800 rounded-xl flex justify-between items-center">
+                    <div>
+                        <div class="text-sm font-medium text-white">Finnhub API</div>
+                        <div class="text-xs text-slate-400">Active (5m Auto-Polling)</div>
+                    </div>
+                    <span class="w-3 h-3 rounded-full bg-kasu-500 inline-block"></span>
+                </div>
+                <button onclick="openModal('modal-logout'); closeModal('modal-settings');" class="w-full py-2.5 bg-red-600/10 hover:bg-red-600/20 text-red-400 text-xs font-semibold rounded-xl transition">
+                    Log Out
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- APPLICATION JAVASCRIPT -->
+    <script>
+        // Supabase configuration
+        const SUPABASE_URL = 'https://skspuaetpklovwiqlkup.supabase.co';
+        const SUPABASE_KEY = 'sb_publishable_ZH84JRGxSLqFnkTtb9Kz_Q_yROByHbo';
+        let supabaseClient = null;
+        try {
+            if (window.supabase) {
+                supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+            }
+        } catch (e) {
+            console.warn('Supabase initialization fallback active', e);
+        }
+
+        // Finnhub API Key
+        const FINNHUB_KEY = 'dbor8u9r01qo2f3o6mm0dbor8u9r01qo2f3o6mmg';
+
+        // Local State Store with persistence
+        let appState = {
+            currentUser: null,
+            accounts: JSON.parse(localStorage.getItem('kasu_accounts')) || [
+                { id: '1', name: '💵 Cash', balance: 5400 },
+                { id: '2', name: '🐷 Piggy bank', balance: 12500 },
+                { id: '3', name: '🏦 Savings', balance: 45000 },
+                { id: '4', name: '💳 Checking', balance: 8200 }
+            ],
+            transactions: JSON.parse(localStorage.getItem('kasu_transactions')) || [
+                { id: 't1', type: 'expense', amount: 450, category: '🍔 Food', accountId: '1', date: new Date().toISOString(), note: 'Lunch' },
+                { id: 't2', type: 'income', amount: 25000, category: '💰 Salary', accountId: '3', date: new Date(Date.now() - 86400000*2).toISOString(), note: 'Monthly Pay' }
+            ],
+            tradingInvestments: JSON.parse(localStorage.getItem('kasu_trading')) || [
+                { id: 'tr1', symbol: 'AAPL', name: 'Apple Inc', units: 10, currentPrice: 185.50 },
+                { id: 'tr2', symbol: 'BINANCE:BTCUSDT', name: 'Bitcoin', units: 0.05, currentPrice: 65000 },
+                { id: 'tr3', symbol: '^BSESN', name: 'BSE SENSEX', units: 2, currentPrice: 73000 }
+            ],
+            nonTradingInvestments: JSON.parse(localStorage.getItem('kasu_nontrading')) || [
+                { id: 'nt1', name: 'SBI-FD', principal: 25000, interestRate: 7.5 },
+                { id: 'nt2', name: 'Govt Bond', principal: 50000, interestRate: 8.1 }
+            ],
+            recurring: JSON.parse(localStorage.getItem('kasu_recurring')) || [
+                { id: 'r1', name: 'Salary', amount: 45000, type: 'recurring', freq: 'Every Month' },
+                { id: 'r2', name: 'Rent', amount: 15000, type: 'recurring', freq: 'Every Month' },
+                { id: 'b1', name: 'Gas Bill', amount: 1200, type: 'bill', freq: 'Every Month' },
+                { id: 'b2', name: 'Milk', amount: 800, type: 'bill', freq: 'Every Month' }
+            ],
+            budgets: JSON.parse(localStorage.getItem('kasu_budgets')) || [
+                { id: 'bu1', name: '🍔 Food Expenditure', limit: 8000 },
+                { id: 'bu2', name: '🛍️ Shopping', limit: 5000 }
+            ]
+        };
+
+        let currentTxType = 'expense';
+        let deleteCallback = null;
+        let chartInstance = null;
+
+        function saveState() {
+            localStorage.setItem('kasu_accounts', JSON.stringify(appState.accounts));
+            localStorage.setItem('kasu_transactions', JSON.stringify(appState.transactions));
+            localStorage.setItem('kasu_trading', JSON.stringify(appState.tradingInvestments));
+            localStorage.setItem('kasu_nontrading', JSON.stringify(appState.nonTradingInvestments));
+            localStorage.setItem('kasu_recurring', JSON.stringify(appState.recurring));
+            localStorage.setItem('kasu_budgets', JSON.stringify(appState.budgets));
+        }
+
+        // Toast notifications
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = `px-4 py-3 rounded-xl shadow-lg text-xs font-semibold text-white pointer-events-auto transition transform translate-y-2 opacity-0 ${type === 'success' ? 'bg-kasu-600' : 'bg-red-600'}`;
+            toast.innerHTML = message;
+            container.appendChild(toast);
+            setTimeout(() => toast.classList.remove('translate-y-2', 'opacity-0'), 50);
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'translate-y-2');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        // Auth management
+        function switchAuthTab(tab) {
+            if (tab === 'login') {
+                document.getElementById('form-login').classList.remove('hidden');
+                document.getElementById('form-signup').classList.add('hidden');
+                document.getElementById('tab-login').className = 'flex-1 py-2 text-sm font-semibold rounded-lg bg-kasu-600 text-white transition';
+                document.getElementById('tab-signup').className = 'flex-1 py-2 text-sm font-semibold rounded-lg text-slate-400 hover:text-white transition';
+            } else {
+                document.getElementById('form-login').classList.add('hidden');
+                document.getElementById('form-signup').classList.remove('hidden');
+                document.getElementById('tab-signup').className = 'flex-1 py-2 text-sm font-semibold rounded-lg bg-kasu-600 text-white transition';
+                document.getElementById('tab-login').className = 'flex-1 py-2 text-sm font-semibold rounded-lg text-slate-400 hover:text-white transition';
+            }
+        }
+
+        function quickDemoLogin() {
+            appState.currentUser = { email: 'demo@kasu.finance' };
+            document.getElementById('auth-view').classList.add('hidden');
+            document.getElementById('main-app').classList.remove('hidden');
+            initApp();
+            showToast('Logged in as Demo User successfully!');
+        }
+
+        function handleLogin(e) {
+            e.preventDefault();
+            quickDemoLogin();
+        }
+
+        function sendVerificationEmail() {
+            const email = document.getElementById('signup-email').value;
+            if (!email) {
+                showToast('Please enter an email address first.', 'error');
+                return;
+            }
+            showToast('Verification code sent to ' + email + ' (Use code: 123456)');
+        }
+
+        function handleSignup(e) {
+            e.preventDefault();
+            const code = document.getElementById('signup-code').value;
+            if (code !== '123456') {
+                showToast('Invalid verification code. Use 123456', 'error');
+                return;
+            }
+            quickDemoLogin();
+            showToast('Account created & verified successfully!');
+        }
+
+        function promptPasswordConfirmation(callback) {
+            deleteCallback = callback;
+            document.getElementById('confirm-password-input').value = '';
+            openModal('modal-password-confirm');
+        }
+
+        function executeConfirmedDelete() {
+            const pwd = document.getElementById('confirm-password-input').value;
+            if (!pwd) {
+                showToast('Password is required for deletion confirmation.', 'error');
+                return;
+            }
+            closeModal('modal-password-confirm');
+            if (deleteCallback) deleteCallback();
+            deleteCallback = null;
+        }
+
+        function performLogout() {
+            closeModal('modal-logout');
+            document.getElementById('main-app').classList.add('hidden');
+            document.getElementById('auth-view').classList.remove('hidden');
+            showToast('Logged out successfully.');
+        }
+
+        // Navigation Tabs
+        function switchTab(tabId) {
+            const tabs = ['home', 'accounts', 'portfolio', 'recurring', 'budgets'];
+            tabs.forEach(t => {
+                document.getElementById(`view-${t}`).classList.add('hidden');
+                document.getElementById(`nav-${t}`).className = 'flex flex-col items-center justify-center flex-1 text-slate-400 hover:text-white transition';
+            });
+            document.getElementById(`view-${tabId}`).classList.remove('hidden');
+            document.getElementById(`nav-${tabId}`).className = 'flex flex-col items-center justify-center flex-1 text-kasu-500 transition';
+            if (tabId === 'budgets') renderExpenseChart();
+        }
+
+        // Modal Controls
+        function openModal(id) { document.getElementById(id).classList.remove('hidden'); }
+        function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+        function openSettingsModal() { openModal('modal-settings'); }
+
+        // Core Initialization & Rendering
+        function initApp() {
+            renderHome();
+            renderAccounts();
+            renderTransactions();
+            renderTradingInvestments();
+            renderNonTradingInvestments();
+            renderRecurring();
+            renderBudgets();
+            populateDropdowns();
+            fetchFinnhubPrices();
+            setInterval(fetchFinnhubPrices, 300000); // 5 min polling
+        }
+
+        function calculateNetWorth() {
+            let total = 0;
+            appState.accounts.forEach(a => total += Number(a.balance));
+            appState.tradingInvestments.forEach(tr => total += (Number(tr.units) * Number(tr.currentPrice || 100)));
+            appState.nonTradingInvestments.forEach(nt => total += Number(nt.principal));
+            return total;
+        }
+
+        function renderHome() {
+            document.getElementById('home-networth').innerText = '₹' + calculateNetWorth().toLocaleString('en-IN', {minimumFractionDigits: 2});
+            
+            // Home Budgets
+            const scrollContainer = document.getElementById('home-budgets-scroll');
+            scrollContainer.innerHTML = appState.budgets.map(b => `
+                <div class="bg-slate-900 border border-slate-800 p-3 rounded-xl min-w-[140px] shrink-0">
+                    <div class="text-xs text-slate-400 truncate">${b.name}</div>
+                    <div class="text-sm font-bold text-white mt-1">₹${b.limit.toLocaleString('en-IN')}</div>
+                </div>
+            `).join('') || '<div class="text-xs text-slate-500">No budgets added</div>';
+
+            // Home Accounts list
+            const accList = document.getElementById('home-accounts-list');
+            accList.innerHTML = appState.accounts.map(a => `
+                <div class="bg-slate-900 border border-slate-800 p-3 rounded-xl flex justify-between items-center">
+                    <div class="text-sm font-medium text-white">${a.name}</div>
+                    <div class="text-sm font-bold text-kasu-400">₹${Number(a.balance).toLocaleString('en-IN')}</div>
+                </div>
+            `).join('');
+        }
+
+        function renderAccounts() {
+            const grid = document.getElementById('accounts-cards-grid');
+            grid.innerHTML = appState.accounts.map(a => `
+                <div onclick="editAccount('${a.id}')" class="bg-slate-900 border border-slate-800 p-3 rounded-xl cursor-pointer hover:border-slate-700 transition relative">
+                    <div class="text-xs text-slate-400">${a.name}</div>
+                    <div class="text-base font-bold text-white mt-1">₹${Number(a.balance).toLocaleString('en-IN')}</div>
+                </div>
+            `).join('');
+        }
+
+        let editingAccountId = null;
+        function openAccountModal() {
+            editingAccountId = null;
+            document.getElementById('account-modal-title').innerText = 'Add Account';
+            document.getElementById('account-name').value = '';
+            document.getElementById('account-balance').value = '';
+            document.getElementById('account-delete-btn').classList.add('hidden');
+            openModal('modal-account');
+        }
+
+        function editAccount(id) {
+            const acc = appState.accounts.find(a => a.id === id);
+            if (!acc) return;
+            editingAccountId = id;
+            document.getElementById('account-modal-title').innerText = 'Edit Account';
+            document.getElementById('account-name').value = acc.name;
+            document.getElementById('account-balance').value = acc.balance;
+            document.getElementById('account-delete-btn').classList.remove('hidden');
+            openModal('modal-account');
+        }
+
+        function saveAccount(e) {
+            e.preventDefault();
+            const name = document.getElementById('account-name').value;
+            const balance = parseFloat(document.getElementById('account-balance').value);
+            if (editingAccountId) {
+                const acc = appState.accounts.find(a => a.id === editingAccountId);
+                if (acc) { acc.name = name; acc.balance = balance; }
+                showToast('Account updated!');
+            } else {
+                appState.accounts.push({ id: Date.now().toString(), name, balance });
+                showToast('Account created!');
+            }
+            saveState();
+            closeModal('modal-account');
+            initApp();
+        }
+
+        function promptDeleteAccount() {
+            promptPasswordConfirmation(() => {
+                appState.accounts = appState.accounts.filter(a => a.id !== editingAccountId);
+                saveState();
+                closeModal('modal-account');
+                initApp();
+                showToast('Account deleted successfully.');
+            });
+        }
+
+        // Transactions logic
+        function openTransactionModal() {
+            document.getElementById('tx-amount').value = '';
+            document.getElementById('tx-note').value = '';
+            document.getElementById('tx-date').value = new Date().toISOString().slice(0, 16);
+            openModal('modal-transaction');
+        }
+
+        function setTxType(type) {
+            currentTxType = type;
+            if (type === 'expense') {
+                document.getElementById('tx-type-expense').className = 'flex-1 py-1.5 text-xs font-semibold rounded-lg bg-red-600 text-white transition';
+                document.getElementById('tx-type-income').className = 'flex-1 py-1.5 text-xs font-semibold rounded-lg text-slate-400 transition';
+            } else {
+                document.getElementById('tx-type-income').className = 'flex-1 py-1.5 text-xs font-semibold rounded-lg bg-kasu-600 text-white transition';
+                document.getElementById('tx-type-expense').className = 'flex-1 py-1.5 text-xs font-semibold rounded-lg text-slate-400 transition';
+            }
+        }
+
+        function saveTransaction(e) {
+            e.preventDefault();
+            const amount = parseFloat(document.getElementById('tx-amount').value);
+            const category = document.getElementById('tx-category').value;
+            const accountId = document.getElementById('tx-account').value;
+            const date = document.getElementById('tx-date').value;
+            const note = document.getElementById('tx-note').value;
+
+            appState.transactions.push({ id: Date.now().toString(), type: currentTxType, amount, category, accountId, date, note });
+
+            // Update account balance
+            const acc = appState.accounts.find(a => a.id === accountId);
+            if (acc) {
+                if (currentTxType === 'income') acc.balance += amount;
+                else acc.balance -= amount;
+            }
+
+            saveState();
+            closeModal('modal-transaction');
+            initApp();
+            showToast('Transaction recorded successfully!');
+        }
+
+        let txFilter = 'all';
+        function filterTransactions(filter) {
+            txFilter = filter;
+            ['all', 'lastweek', 'lastmonth', 'income', 'expense'].forEach(f => {
+                const btn = document.getElementById(`filter-${f}`);
+                if (btn) btn.className = f === filter ? 'px-3 py-1.5 rounded-lg bg-kasu-600 text-white shrink-0' : 'px-3 py-1.5 rounded-lg bg-slate-800 text-slate-300 shrink-0';
+            });
+            renderTransactions();
+        }
+
+        function renderTransactions() {
+            const list = document.getElementById('transactions-list');
+            let filtered = [...appState.transactions];
+            const now = Date.now();
+
+            if (txFilter === 'income' || txFilter === 'expense') {
+                filtered = filtered.filter(t => t.type === txFilter);
+            } else if (txFilter === 'lastweek') {
+                filtered = filtered.filter(t => (now - new Date(t.date).getTime()) <= 7 * 86400000);
+            } else if (txFilter === 'lastmonth') {
+                filtered = filtered.filter(t => (now - new Date(t.date).getTime()) <= 30 * 86400000);
+            }
+
+            list.innerHTML = filtered.reverse().map(t => {
+                const acc = appState.accounts.find(a => a.id === t.accountId);
+                return `
+                    <div class="bg-slate-900 border border-slate-800 p-3 rounded-xl flex justify-between items-center">
+                        <div class="flex items-center gap-3">
+                            <div class="w-9 h-9 rounded-xl ${t.type === 'income' ? 'bg-kasu-500/10 text-kasu-500' : 'bg-red-500/10 text-red-500'} flex items-center justify-center font-bold">
+                                ${t.type === 'income' ? '+' : '-'}
+                            </div>
+                            <div>
+                                <div class="text-sm font-medium text-white">${t.category}</div>
+                                <div class="text-[10px] text-slate-400">${acc ? acc.name : 'Account'} • ${new Date(t.date).toLocaleDateString()}</div>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-sm font-bold ${t.type === 'income' ? 'text-kasu-400' : 'text-red-400'}">₹${t.amount.toLocaleString('en-IN')}</div>
+                            <div class="text-[10px] text-slate-500">${t.note || ''}</div>
+                        </div>
+                    </div>
+                `;
+            }).join('') || '<div class="text-xs text-slate-500 text-center py-4">No transactions found</div>';
+        }
+
+        // Finnhub live trading integration
+        async function fetchFinnhubPrices() {
+            document.getElementById('networth-spinner').classList.add('fa-spin');
+            for (let tr of appState.tradingInvestments) {
+                try {
+                    const res = await fetch(`https://finnhub.io/api/v1/quote?symbol=${encodeURIComponent(tr.symbol)}&token=${FINNHUB_KEY}`);
+                    const data = await res.json();
+                    if (data && data.c) {
+                        tr.currentPrice = data.c;
+                    }
+                } catch (e) {
+                    console.warn('Finnhub fetch error for symbol:', tr.symbol);
+                }
+            }
+            saveState();
+            renderHome();
+            renderTradingInvestments();
+            document.getElementById('networth-spinner').classList.remove('fa-spin');
+        }
+
+        function renderTradingInvestments() {
+            const list = document.getElementById('trading-investments-list');
+            list.innerHTML = appState.tradingInvestments.map(tr => {
+                const totalVal = Number(tr.units) * Number(tr.currentPrice || 100);
+                return `
+                    <div class="bg-slate-900 border border-slate-800 p-3 rounded-xl flex justify-between items-center">
+                        <div>
+                            <div class="text-sm font-bold text-white">${tr.name} <span class="text-xs text-slate-400 font-normal">(${tr.symbol})</span></div>
+                            <div class="text-xs text-slate-400 mt-0.5">Units: ${tr.units} @ ₹${Number(tr.currentPrice || 0).toLocaleString('en-IN')}</div>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-sm font-bold text-white">₹${totalVal.toLocaleString('en-IN', {maximumFractionDigits: 2})}</div>
+                            <div class="text-[10px] text-kasu-400">Live Quote</div>
+                        </div>
+                    </div>
+                `;
+            }).join('') || '<div class="text-xs text-slate-500">No trading investments added</div>';
+        }
+
+        function openTradingInvestmentModal() { openModal('modal-trading'); }
+        function saveTradingInvestment(e) {
+            e.preventDefault();
+            const symbol = document.getElementById('trade-symbol').value.toUpperCase();
+            const name = document.getElementById('trade-name').value;
+            const units = parseFloat(document.getElementById('trade-amount').value);
+            appState.tradingInvestments.push({ id: Date.now().toString(), symbol, name, units, currentPrice: 100 });
+            saveState();
+            closeModal('modal-trading');
+            initApp();
+            fetchFinnhubPrices();
+            showToast('Trading investment added!');
+        }
+
+        // Non-Trading Investments
+        function renderNonTradingInvestments() {
+            const list = document.getElementById('nontrading-investments-list');
+            list.innerHTML = appState.nonTradingInvestments.map(nt => `
+                <div class="bg-slate-900 border border-slate-800 p-3 rounded-xl flex justify-between items-center">
+                    <div>
+                        <div class="text-sm font-bold text-white">${nt.name}</div>
+                        <div class="text-xs text-slate-400 mt-0.5">Interest: ${nt.interestRate}% p.a.</div>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-sm font-bold text-white">₹${Number(nt.principal).toLocaleString('en-IN')}</div>
+                        <div class="text-[10px] text-slate-500">Fixed Value</div>
+                    </div>
+                </div>
+            `).join('') || '<div class="text-xs text-slate-500">No non-trading investments added</div>';
+        }
+
+        function openNonTradingInvestmentModal() { openModal('modal-nontrading'); }
+        function saveNonTradingInvestment(e) {
+            e.preventDefault();
+            const name = document.getElementById('nt-name').value;
+            const principal = parseFloat(document.getElementById('nt-amount').value);
+            const interestRate = parseFloat(document.getElementById('nt-interest').value);
+            appState.nonTradingInvestments.push({ id: Date.now().toString(), name, principal, interestRate });
+            saveState();
+            closeModal('modal-nontrading');
+            initApp();
+            showToast('Non-trading investment added!');
+        }
+
+        // Recurring & Bills
+        function renderRecurring() {
+            const recList = document.getElementById('recurring-transactions-list');
+            const billsList = document.getElementById('bills-list');
+
+            const recs = appState.recurring.filter(r => r.type === 'recurring');
+            const bills = appState.recurring.filter(r => r.type === 'bill');
+
+            recList.innerHTML = recs.map(r => `
+                <div class="bg-slate-900 border border-slate-800 p-3 rounded-xl flex justify-between items-center">
+                    <div>
+                        <div class="text-sm font-medium text-white">${r.name}</div>
+                        <div class="text-[10px] text-slate-400">Frequency: ${r.freq}</div>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-sm font-bold text-white">₹${r.amount.toLocaleString('en-IN')}</div>
+                    </div>
+                </div>
+            `).join('') || '<div class="text-xs text-slate-500">No recurring items</div>';
+
+            billsList.innerHTML = bills.map(b => `
+                <div class="bg-slate-900 border border-slate-800 p-3 rounded-xl flex justify-between items-center">
+                    <div>
+                        <div class="text-sm font-medium text-white">${b.name}</div>
+                        <div class="text-[10px] text-slate-400">Due: ${b.freq}</div>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <div class="text-sm font-bold text-red-400">₹${b.amount.toLocaleString('en-IN')}</div>
+                        <button onclick="payBill('${b.id}')" class="px-2.5 py-1 bg-kasu-600 hover:bg-kasu-700 text-white text-xs rounded-lg">Pay</button>
+                    </div>
+                </div>
+            `).join('') || '<div class="text-xs text-slate-500">No active bills</div>';
+        }
+
+        function openRecurringModal() { openModal('modal-recurring'); }
+        function saveRecurringItem(e) {
+            e.preventDefault();
+            const name = document.getElementById('rec-name').value;
+            const amount = parseFloat(document.getElementById('rec-amount').value);
+            const type = document.getElementById('rec-type').value;
+            const freq = document.getElementById('rec-freq').value;
+            appState.recurring.push({ id: Date.now().toString(), name, amount, type, freq });
+            saveState();
+            closeModal('modal-recurring');
+            initApp();
+            showToast('Recurring item saved!');
+        }
+
+        function payBill(id) {
+            const bill = appState.recurring.find(r => r.id === id);
+            if (!bill) return;
+            showToast(`Bill "${bill.name}" paid successfully!`);
+            appState.recurring = appState.recurring.filter(r => r.id !== id);
+            saveState();
+            initApp();
+        }
+
+        // Budgets & Expenses
+        function renderBudgets() {
+            const list = document.getElementById('budgets-list');
+            list.innerHTML = appState.budgets.map(b => {
+                return `
+                    <div class="bg-slate-900 border border-slate-800 p-3 rounded-xl space-y-2">
+                        <div class="flex justify-between items-center text-sm font-medium text-white">
+                            <span>${b.name}</span>
+                            <span class="text-kasu-400 font-bold">Limit: ₹${b.limit.toLocaleString('en-IN')}</span>
+                        </div>
+                        <div class="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
+                            <div class="bg-kasu-500 h-full rounded-full" style="width: 45%;"></div>
+                        </div>
+                    </div>
+                `;
+            }).join('') || '<div class="text-xs text-slate-500">No budgets defined</div>';
+        }
+
+        function openBudgetModal() { openModal('modal-budget'); }
+        function saveBudget(e) {
+            e.preventDefault();
+            const name = document.getElementById('budget-name').value;
+            const limit = parseFloat(document.getElementById('budget-limit').value);
+            appState.budgets.push({ id: Date.now().toString(), name, limit });
+            saveState();
+            closeModal('modal-budget');
+            initApp();
+            showToast('Budget saved!');
+        }
+
+        function renderExpenseChart() {
+            const ctx = document.getElementById('expenseChart').getContext('2d');
+            if (chartInstance) chartInstance.destroy();
+
+            // Calculate category spending
+            const catTotals = {};
+            appState.transactions.filter(t => t.type === 'expense').forEach(t => {
+                catTotals[t.category] = (catTotals[t.category] || 0) + t.amount;
+            });
+
+            const labels = Object.keys(catTotals);
+            const data = Object.values(catTotals);
+
+            if (labels.length === 0) {
+                labels.push('No Expenses');
+                data.push(1);
+            }
+
+            chartInstance = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: data,
+                        backgroundColor: ['#22c55e', '#3b82f6', '#eab308', '#ec4899', '#8b5cf6', '#06b6d4']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom', labels: { color: '#cbd5e1', font: { size: 10 } } }
+                    }
+                }
+            });
+        }
+
+        function populateDropdowns() {
+            const txAccSelect = document.getElementById('tx-account');
+            if (txAccSelect) {
+                txAccSelect.innerHTML = appState.accounts.map(a => `<option value="${a.id}">${a.name} (₹${a.balance})</option>`).join('');
+            }
+        }
+
+        // Initialize on load
+        window.onload = function() {
+            // Check if demo user can auto-start or show auth screen
+        }
+    </script>
+</body>
+</html>
