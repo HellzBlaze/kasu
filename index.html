@@ -99,18 +99,11 @@
                 </h3>
                 <div>
                     <label class="block text-xs font-semibold text-gray-400 mb-1.5 uppercase tracking-wider">Email</label>
-                    <div class="flex gap-2">
-                        <input type="email" id="signupEmail" placeholder="user@example.com" class="flex-1 px-4 py-3 bg-gray-900 border border-gray-800 rounded-xl focus:border-neonGreen focus:ring-1 focus:ring-neonGreen outline-none text-sm text-white transition">
-                        <button type="button" onclick="sendVerificationCode()" class="bg-gray-800 hover:bg-gray-700 text-neonGreen text-xs px-3 py-3 rounded-xl font-bold border border-gray-700 transition">Send Code</button>
-                    </div>
+                    <input type="email" id="signupEmail" placeholder="user@example.com" class="w-full px-4 py-3 bg-gray-900 border border-gray-800 rounded-xl focus:border-neonGreen focus:ring-1 focus:ring-neonGreen outline-none text-sm text-white transition">
                 </div>
                 <div>
                     <label class="block text-xs font-semibold text-gray-400 mb-1.5 uppercase tracking-wider">Password</label>
                     <input type="password" id="signupPassword" placeholder="••••••••" class="w-full px-4 py-3 bg-gray-900 border border-gray-800 rounded-xl focus:border-neonGreen focus:ring-1 focus:ring-neonGreen outline-none text-sm text-white transition">
-                </div>
-                <div>
-                    <label class="block text-xs font-semibold text-gray-400 mb-1.5 uppercase tracking-wider">Verification Code / OTP</label>
-                    <input type="text" id="signupOtp" placeholder="123456" class="w-full px-4 py-3 bg-gray-900 border border-gray-800 rounded-xl focus:border-neonGreen focus:ring-1 focus:ring-neonGreen outline-none text-sm text-white transition">
                 </div>
                 <button onclick="handleSignup()" class="w-full bg-neonGreen hover:bg-neonGreenHover text-black font-extrabold py-3 rounded-xl text-sm shadow-lg shadow-neonGreen/20 transition duration-200 mt-2">Sign Up</button>
                 <div class="text-center text-xs text-gray-400 pt-3 border-t border-gray-800/80">
@@ -443,26 +436,18 @@
         async function handleSignup() {
             const email = document.getElementById('signupEmail').value;
             const password = document.getElementById('signupPassword').value;
-            const token = document.getElementById('signupOtp').value;
+            if(!email || !password) return alert('Enter email & password');
 
-            if (token) {
-                const { data, error } = await client.auth.verifyOtp({ email, token, type: 'signup' });
-                if (error) return alert(error.message);
-                currentUser = data.user;
+            const { data, error } = await client.auth.signUp({ email, password });
+            if (error) return alert(error.message);
+            
+            if (data.session) {
+                currentUser = data.session.user;
                 showAppUI();
             } else {
-                const { data, error } = await client.auth.signUp({ email, password });
-                if (error) return alert(error.message);
-                alert('Verification code sent! Please check your email.');
+                alert('Account created successfully! You can now log in.');
+                toggleAuthMode('login');
             }
-        }
-
-        async function sendVerificationCode() {
-            const email = document.getElementById('signupEmail').value;
-            if(!email) return alert('Enter email address');
-            const { error } = await client.auth.signInWithOtp({ email });
-            if (error) alert(error.message);
-            else alert('OTP sent to email!');
         }
 
         function triggerBiometricAuth() {
